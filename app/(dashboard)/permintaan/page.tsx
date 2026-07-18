@@ -1,17 +1,92 @@
-export default function PermintaanPage() {
+import React from 'react'
+import { createClient } from '@/lib/supabase/server'
+import ListPermintaan from '@/components/permintaan/ListPermintaan'
+
+interface UserProfile {
+  nama_lengkap: string
+  role: string
+  unit_kerja: string | null
+}
+
+export default async function PermintaanPage() {
+  const supabase = await createClient()
+
+  // 1. Get authenticated user identity
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let userRole = 'pemohon'
+  let userProfile: UserProfile | null = null
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('nama_lengkap, role, unit_kerja')
+      .eq('id', user.id)
+      .single()
+
+    if (profile) {
+      userRole = profile.role
+      userProfile = profile as UserProfile
+    }
+  }
+
+  // 2. Fetch requests (conditional based on role - Defense in Depth)
+  let query = supabase
+    .from('permintaan')
+    .select(`
+      id,
+      nomor,
+      tanggal,
+      unit_kerja,
+      keperluan,
+      status,
+      profiles (
+        nama_lengkap
+      )
+    `)
+    .order('tanggal', { ascending: false })
+
+  if (userRole === 'pemohon' && user) {
+    query = query.eq('pemohon_id', user.id)
+  }
+
+  const { data: requests, error: reqError } = await query
+  if (reqError) {
+    console.error('Failed to fetch requests list:', reqError)
+  }
+
+  // 3. Fetch barang list (for request form selection options)
+  const { data: barangList, error: barangError } = await supabase
+    .from('barang')
+    .select('id, nama, stok, satuan')
+    .order('nama', { ascending: true })
+
+  if (barangError) {
+    console.error('Failed to fetch stock options:', barangError)
+  }
+
+  const requestsList = (requests || []) as any[]
+  const stockOptions = (barangList || []) as any[]
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Daftar Permintaan Barang</h1>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Permintaan Barang Kantor (ATK)
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Daftar pengajuan dan status permintaan barang habis pakai Pengadilan Agama Kajen.
+        </p>
       </div>
-      <p className="text-slate-600 dark:text-slate-400">
-        Kelola dan ajukan permintaan barang persediaan kantor (ATK).
-      </p>
-      
-      {/* Content will be filled in Permintaan Module step */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 text-center py-12">
-        <p className="text-slate-500">Daftar permintaan barang sedang disiapkan.</p>
-      </div>
+
+      <ListPermintaan
+        initialRequests={requestsList}
+        barangList={stockOptions}
+        userRole={userRole}
+        userProfile={userProfile}
+      />
     </div>
   )
 }
