@@ -95,3 +95,38 @@ export async function createPermintaan(prevState: any, formData: FormData) {
   revalidatePath('/permintaan')
   return { success: true }
 }
+
+export async function resolvePermintaan(id: string, status: 'disetujui' | 'ditolak') {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['pengelola', 'pimpinan', 'admin'].includes(profile.role)) {
+    return { error: 'Anda tidak memiliki wewenang untuk memproses permintaan ini.' }
+  }
+
+  const { error } = await supabase
+    .from('permintaan')
+    .update({
+      status,
+      disetujui_oleh: user.id,
+    })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/permintaan')
+  revalidatePath(`/permintaan/${id}`)
+  return { success: true }
+}

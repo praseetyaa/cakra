@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Clock, CheckCircle2, XCircle, User, Clipboard, Calendar, FileText, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import TombolApproval from '@/components/permintaan/TombolApproval'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -126,6 +127,8 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
     }
   })
 
+  const hasStockShortage = detailItems.some((item) => item.jumlah > item.stokAvailable)
+
   // Helpers
   const formatDateTime = (dateStr: string) => {
     return new Date(dateStr).toLocaleString('id-ID', {
@@ -158,6 +161,16 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
           </h1>
         </div>
       </div>
+
+      {request.status === 'menunggu' && hasStockShortage && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 dark:bg-amber-950/20 dark:border-amber-900 dark:text-amber-400 flex items-start gap-3 shadow-sm">
+          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-bold text-sm">Peringatan: Stok Gudang Tidak Mencukupi</h4>
+            <p className="text-xs mt-1">Satu atau beberapa item yang diminta memiliki kuantitas melebihi stok tersedia saat ini di gudang. Harap tinjau ketersediaan barang sebelum menyetujui.</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Metadata Details Card */}
@@ -235,12 +248,19 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
               {request.catatan && (
                 <div className="flex flex-col gap-1 border-t border-slate-50 dark:border-slate-800/30 pt-3">
                   <span className="text-xs text-slate-400">Catatan Pemohon</span>
-                  <span className="text-xs text-slate-650 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded italic">
+                  <span className="text-xs text-slate-600 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded italic">
                     "{request.catatan}"
                   </span>
                 </div>
               )}
             </CardContent>
+
+            {/* Action buttons inside the card */}
+            {request.status === 'menunggu' && ['pengelola', 'pimpinan', 'admin'].includes(userRole) && (
+              <div className="px-6 pb-6 pt-4 border-t border-slate-100 dark:border-slate-800/40">
+                <TombolApproval requestId={id} />
+              </div>
+            )}
           </Card>
 
           {/* Approver / Decision details card */}
