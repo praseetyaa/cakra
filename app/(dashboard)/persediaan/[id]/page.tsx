@@ -11,7 +11,7 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ArrowLeft, Package, MapPin, AlertTriangle, ShieldCheck, Activity } from 'lucide-react'
 
@@ -66,6 +66,10 @@ export default async function PersediaanDetailPage({ params }: PageProps) {
     .select('*')
     .eq('barang_id', id)
     .order('created_at', { ascending: false })
+
+  if (riwayatError) {
+    console.error('Failed to fetch stock history:', riwayatError)
+  }
 
   const riwayatList = riwayat || []
 
@@ -185,7 +189,7 @@ export default async function PersediaanDetailPage({ params }: PageProps) {
               {barang.status}
             </Badge>
             <p className="text-xs text-slate-400 mt-2">
-              Kategori: {Array.isArray(barang.kategori_barang) ? barang.kategori_barang[0]?.nama : (barang.kategori_barang as any)?.nama || 'Tanpa Kategori'}
+              Kategori: {Array.isArray(barang.kategori_barang) ? (barang.kategori_barang[0] as { nama: string })?.nama : (barang.kategori_barang as { nama: string } | null)?.nama || 'Tanpa Kategori'}
             </p>
           </CardContent>
         </Card>

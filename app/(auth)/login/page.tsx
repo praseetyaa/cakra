@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useActionState, useEffect, useState, Suspense } from 'react'
+import React, { useActionState, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { signInWithEmail, signInWithGoogle } from '@/app/actions/auth'
@@ -9,19 +9,24 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
-const initialState = {
-  error: null as string | null,
+interface FormState {
+  error: string | null
+}
+
+const initialState: FormState = {
+  error: null,
 }
 
 function LoginForm() {
   const searchParams = useSearchParams()
-  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const registered = searchParams.get('registered') === 'true'
+  const isAuthCodeError = searchParams.get('error') === 'auth-code-error'
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const [state, formAction, isPending] = useActionState(
-    async (prevState: any, formData: FormData) => {
+    async (prevState: FormState, formData: FormData) => {
       setErrorMsg(null)
-      setSuccessMsg(null)
       const res = await signInWithEmail(prevState, formData)
       if (res && res.error) {
         return { error: res.error }
@@ -31,14 +36,10 @@ function LoginForm() {
     initialState
   )
 
-  useEffect(() => {
-    if (searchParams.get('registered') === 'true') {
-      setSuccessMsg('Registrasi berhasil! Silakan cek email Anda untuk konfirmasi (jika diperlukan) atau langsung login di bawah ini.')
-    }
-    if (searchParams.get('error') === 'auth-code-error') {
-      setErrorMsg('Gagal melakukan autentikasi kode. Silakan coba lagi.')
-    }
-  }, [searchParams])
+  const successMsg = registered
+    ? 'Registrasi berhasil! Silakan cek email Anda untuk konfirmasi (jika diperlukan) atau langsung login di bawah ini.'
+    : null
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 py-12 sm:px-6 lg:px-8">
@@ -67,15 +68,15 @@ function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {successMsg && (
+          {successMsg && !state.error && !errorMsg && (
             <div className="p-3 text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-300 rounded">
               {successMsg}
             </div>
           )}
 
-          {(state.error || errorMsg) && (
+          {(state.error || errorMsg || (isAuthCodeError && !state.error && !errorMsg)) && (
             <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded">
-              {state.error || errorMsg}
+              {state.error || errorMsg || 'Gagal melakukan autentikasi kode. Silakan coba lagi.'}
             </div>
           )}
 

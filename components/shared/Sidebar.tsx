@@ -11,8 +11,10 @@ import {
   FileText,
   User,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Bell
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 interface UserProfile {
   nama_lengkap: string
@@ -34,6 +36,67 @@ const navItems = [
 
 export default function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname()
+  const [unreadCount, setUnreadCount] = React.useState(0)
+
+  React.useEffect(() => {
+    const supabase = createClient()
+    let activeChannel: ReturnType<typeof supabase.channel> | null = null
+    let isMounted = true
+
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!isMounted || !user) return
+
+      // Initial count fetch
+      const { count } = await supabase
+        .from('notifikasi')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('dibaca', false)
+
+      if (!isMounted) return
+      setUnreadCount(count || 0)
+
+      // Use a dynamic channel name to prevent cache collision in Supabase client instance
+      const channelName = `sidebar_notif_${user.id}_${Math.random().toString(36).substring(2, 9)}`
+
+      // Subscribe to public.notifikasi modifications
+      activeChannel = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifikasi',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            if (!isMounted) return
+            supabase
+              .from('notifikasi')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', user.id)
+              .eq('dibaca', false)
+              .then(({ count: newCount }) => {
+                if (isMounted) {
+                  setUnreadCount(newCount || 0)
+                }
+              })
+          }
+        )
+        .subscribe()
+    }
+
+    init()
+
+    return () => {
+      isMounted = false
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel)
+      }
+    }
+  }, [])
 
   const formatRole = (role: string) => {
     switch (role) {
@@ -109,19 +172,35 @@ export default function Sidebar({ profile }: SidebarProps) {
       {/* User Information and Logout Box */}
       <div className="p-4 border-t border-emerald-850 bg-emerald-950/20">
         {profile && (
-          <div className="flex items-center gap-3 px-2 py-3 mb-3">
-            <div className="h-10 w-10 rounded-full bg-emerald-850 border border-emerald-700/60 flex items-center justify-center font-bold text-emerald-200 text-sm shadow-sm overflow-hidden">
-              {profile.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatar_url} alt={profile.nama_lengkap} className="h-full w-full object-cover" />
-              ) : (
-                profile.nama_lengkap.charAt(0).toUpperCase()
+          <div className="flex items-center justify-between gap-3 px-2 py-3 mb-3 bg-emerald-955/30 border border-emerald-800/40 rounded-xl">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-full bg-emerald-850 border border-emerald-700/60 flex items-center justify-center font-bold text-emerald-200 text-sm shadow-sm overflow-hidden shrink-0">
+                {profile.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatar_url} alt={profile.nama_lengkap} className="h-full w-full object-cover" />
+                ) : (
+                  profile.nama_lengkap.charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-emerald-50 truncate">{profile.nama_lengkap}</p>
+                <p className="text-[10px] text-emerald-400 font-medium truncate">{formatRole(profile.role)}</p>
+              </div>
+            </div>
+            <Link
+              href="/notifikasi"
+              className={`relative p-2 rounded-lg transition-all active:scale-95 ${
+                pathname === '/notifikasi'
+                  ? 'bg-emerald-800 text-white border border-emerald-700/60'
+                  : 'text-emerald-200/70 hover:text-white hover:bg-emerald-800/40'
+              }`}
+              title="Notifikasi"
+            >
+              <Bell className="h-4.5 w-4.5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 border border-emerald-900 animate-pulse" />
               )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-emerald-50 truncate">{profile.nama_lengkap}</p>
-              <p className="text-[10px] text-emerald-400 font-medium truncate">{formatRole(profile.role)}</p>
-            </div>
+            </Link>
           </div>
         )}
 

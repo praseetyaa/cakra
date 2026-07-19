@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function createBarang(prevState: any, formData: FormData) {
+export async function createBarang(prevState: unknown, formData: FormData) {
   const nama = formData.get('nama') as string
   const kategori_id = formData.get('kategori_id') as string
   const satuan = formData.get('satuan') as string
@@ -64,7 +64,7 @@ export async function createBarang(prevState: any, formData: FormData) {
   return { success: true }
 }
 
-export async function updateBarang(id: string, prevState: any, formData: FormData) {
+export async function updateBarang(id: string, prevState: unknown, formData: FormData) {
   const nama = formData.get('nama') as string
   const kategori_id = formData.get('kategori_id') as string
   const satuan = formData.get('satuan') as string

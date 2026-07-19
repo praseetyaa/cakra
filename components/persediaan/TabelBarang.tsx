@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select'
 import { Search, Plus, Edit, Eye, ShieldAlert, Archive } from 'lucide-react'
 
-interface Barang {
+export interface Barang {
   id: string
   nama: string
   kategori_id: string | null

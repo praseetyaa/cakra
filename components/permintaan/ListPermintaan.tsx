@@ -1,6 +1,6 @@
 'use client'
-
-import React, { useState, useTransition, useActionState } from 'react'
+ 
+import React, { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { createPermintaan } from '@/app/actions/permintaan'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -39,13 +39,12 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  ArrowRight,
   ShieldAlert,
   AlertTriangle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface RequestItem {
+export interface RequestItem {
   id: string
   nomor: string
   tanggal: string
@@ -57,7 +56,7 @@ interface RequestItem {
   }
 }
 
-interface Barang {
+export interface Barang {
   id: string
   nama: string
   stok: number

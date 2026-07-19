@@ -13,7 +13,7 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import {
   ClipboardList,
   Clock,
@@ -21,8 +21,6 @@ import {
   TrendingUp,
   PackageCheck,
   Package,
-  Activity,
-  ArrowUpRight,
   ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

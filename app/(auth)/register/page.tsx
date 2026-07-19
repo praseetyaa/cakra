@@ -14,7 +14,7 @@ const initialState = {
 
 export default function RegisterPage() {
   const [state, formAction, isPending] = useActionState(
-    async (prevState: any, formData: FormData) => {
+    async (prevState: unknown, formData: FormData) => {
       const res = await signUpWithEmail(prevState, formData)
       if (res && res.error) {
         return { error: res.error }

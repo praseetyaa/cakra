@@ -1,15 +1,39 @@
-export default function NotifikasiPage() {
+import React from 'react'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { getNotifications } from '@/app/actions/notifikasi'
+import ListNotifikasi from '@/components/notifikasi/ListNotifikasi'
+
+export default async function NotifikasiPage() {
+  const supabase = await createClient()
+
+  // 1. Get current authenticated user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  // 2. Fetch initial notifications
+  const initialNotifications = await getNotifications()
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Notifikasi</h1>
-      <p className="text-slate-600 dark:text-slate-400">
-        Informasi real-time status permintaan dan stok persediaan.
-      </p>
-      
-      {/* Content will be filled in Notifikasi step */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 text-center py-12">
-        <p className="text-slate-500">Notifikasi Anda sedang disiapkan.</p>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Notifikasi
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Informasi real-time mengenai status pengajuan barang dan kondisi persediaan logistik kantor.
+        </p>
       </div>
+
+      <ListNotifikasi
+        initialNotifications={initialNotifications}
+        userId={user.id}
+      />
     </div>
   )
 }

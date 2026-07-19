@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function createPermintaan(prevState: any, formData: FormData) {
+export async function createPermintaan(prevState: unknown, formData: FormData) {
   const unit_kerja = formData.get('unit_kerja') as string
   const keperluan = formData.get('keperluan') as string
   const catatan = formData.get('catatan') as string || ''
@@ -20,7 +20,7 @@ export async function createPermintaan(prevState: any, formData: FormData) {
   let items: { barang_id: string; jumlah: number }[] = []
   try {
     items = JSON.parse(itemsJson)
-  } catch (e) {
+  } catch {
     return { error: 'Format barang tidak valid.' }
   }
 

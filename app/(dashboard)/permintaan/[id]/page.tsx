@@ -2,7 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -116,7 +116,7 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
     console.error('Failed to fetch request details:', detailsError)
   }
 
-  const detailItems = (details || []).map((d: any) => {
+  const detailItems = (details || []).map((d: { id: string; jumlah: number; barang: { nama: string; satuan: string; stok: number } | { nama: string; satuan: string; stok: number }[] | null | undefined }) => {
     const item = Array.isArray(d.barang) ? d.barang[0] : d.barang
     return {
       id: d.id,
@@ -249,7 +249,7 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
                 <div className="flex flex-col gap-1 border-t border-slate-50 dark:border-slate-800/30 pt-3">
                   <span className="text-xs text-slate-400">Catatan Pemohon</span>
                   <span className="text-xs text-slate-600 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded italic">
-                    "{request.catatan}"
+                    &quot;{request.catatan}&quot;
                   </span>
                 </div>
               )}

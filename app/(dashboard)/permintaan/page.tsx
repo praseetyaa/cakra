@@ -1,6 +1,6 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
-import ListPermintaan from '@/components/permintaan/ListPermintaan'
+import ListPermintaan, { RequestItem, Barang } from '@/components/permintaan/ListPermintaan'
 
 interface UserProfile {
   nama_lengkap: string
@@ -42,7 +42,7 @@ export default async function PermintaanPage() {
       unit_kerja,
       keperluan,
       status,
-      profiles (
+      profiles!pemohon_id (
         nama_lengkap
       )
     `)
@@ -67,8 +67,8 @@ export default async function PermintaanPage() {
     console.error('Failed to fetch stock options:', barangError)
   }
 
-  const requestsList = (requests || []) as any[]
-  const stockOptions = (barangList || []) as any[]
+  const requestsList = (requests || []) as unknown as RequestItem[]
+  const stockOptions = (barangList || []) as unknown as Barang[]
 
   return (
     <div className="space-y-6">

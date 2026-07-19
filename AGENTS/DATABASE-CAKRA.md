@@ -223,41 +223,43 @@ alter table permintaan_detail enable row level security;
 alter table riwayat_stok enable row level security;
 alter table notifikasi enable row level security;
 
+-- Helper function to fetch user role securely bypassing RLS (to avoid infinite recursion)
+create or replace function public.get_user_role(user_id uuid)
+returns text as $$
+  select role from public.profiles where id = user_id;
+$$ language sql security definer;
+
 -- PROFILES: user bisa lihat & update profil sendiri; pengelola/pimpinan/admin bisa lihat semua
 create policy "profiles_select" on profiles for select
-  using (auth.uid() = id or exists (
-    select 1 from profiles p where p.id = auth.uid() and p.role in ('pengelola','pimpinan','admin')
-  ));
+  using (auth.uid() = id or get_user_role(auth.uid()) in ('pengelola','pimpinan','admin'));
 create policy "profiles_update_own" on profiles for update
   using (auth.uid() = id);
 
 -- BARANG: semua user login bisa lihat; hanya pengelola/admin bisa insert/update
 create policy "barang_select" on barang for select using (auth.role() = 'authenticated');
 create policy "barang_insert" on barang for insert with check (
-  exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','admin'))
+  get_user_role(auth.uid()) in ('pengelola','admin')
 );
 create policy "barang_update" on barang for update using (
-  exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','admin'))
+  get_user_role(auth.uid()) in ('pengelola','admin')
 );
 
 -- PERMINTAAN: pemohon lihat & buat punya sendiri; pengelola/pimpinan lihat semua & bisa update (approval)
 create policy "permintaan_select" on permintaan for select using (
-  pemohon_id = auth.uid() or exists (
-    select 1 from profiles where id = auth.uid() and role in ('pengelola','pimpinan','admin')
-  )
+  pemohon_id = auth.uid() or get_user_role(auth.uid()) in ('pengelola','pimpinan','admin')
 );
 create policy "permintaan_insert" on permintaan for insert with check (pemohon_id = auth.uid());
 create policy "permintaan_update_approval" on permintaan for update using (
-  exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','pimpinan','admin'))
+  get_user_role(auth.uid()) in ('pengelola','pimpinan','admin')
 );
 
 -- PERMINTAAN_DETAIL: ikut aturan permintaan induknya
 create policy "permintaan_detail_select" on permintaan_detail for select using (
-  exists (select 1 from permintaan p where p.id = permintaan_id and (
-    p.pemohon_id = auth.uid() or exists (
-      select 1 from profiles where id = auth.uid() and role in ('pengelola','pimpinan','admin')
-    )
-  ))
+  exists (
+    select 1 from permintaan p 
+    where p.id = permintaan_id 
+    and (p.pemohon_id = auth.uid() or get_user_role(auth.uid()) in ('pengelola','pimpinan','admin'))
+  )
 );
 create policy "permintaan_detail_insert" on permintaan_detail for insert with check (
   exists (select 1 from permintaan p where p.id = permintaan_id and p.pemohon_id = auth.uid())
@@ -265,12 +267,17 @@ create policy "permintaan_detail_insert" on permintaan_detail for insert with ch
 
 -- RIWAYAT_STOK: hanya pengelola/pimpinan/admin
 create policy "riwayat_stok_select" on riwayat_stok for select using (
-  exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','pimpinan','admin'))
+  get_user_role(auth.uid()) in ('pengelola','pimpinan','admin')
 );
 
 -- NOTIFIKASI: hanya untuk diri sendiri
 create policy "notifikasi_select" on notifikasi for select using (user_id = auth.uid());
 create policy "notifikasi_update" on notifikasi for update using (user_id = auth.uid());
+
+-- KATEGORI_BARANG: semua user authenticated bisa lihat dan tambah (untuk auto-seed)
+alter table kategori_barang enable row level security;
+create policy "kategori_barang_select" on kategori_barang for select using (auth.role() = 'authenticated');
+create policy "kategori_barang_insert" on kategori_barang for insert with check (auth.role() = 'authenticated');
 ```
 
 ---

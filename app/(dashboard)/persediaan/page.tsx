@@ -1,7 +1,7 @@
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getCategories } from '@/app/actions/persediaan'
-import TabelBarang from '@/components/persediaan/TabelBarang'
+import TabelBarang, { Barang } from '@/components/persediaan/TabelBarang'
 
 export default async function PersediaanPage() {
   const supabase = await createClient()
@@ -49,7 +49,7 @@ export default async function PersediaanPage() {
     console.error('Failed to fetch inventory:', error)
   }
 
-  const items = (barangList || []) as any[]
+  const items = (barangList || []) as unknown as Barang[]
 
   return (
     <div className="space-y-6">
