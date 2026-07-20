@@ -15,32 +15,36 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  
-  // Retrieve the authenticated user session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   let profile: UserProfile | null = null
 
-  if (user) {
-    // Fetch profile data matching user id
-    const { data } = await supabase
-      .from('profiles')
-      .select('nama_lengkap, role, avatar_url')
-      .eq('id', user.id)
-      .single()
+  try {
+    const supabase = await createClient()
+    
+    // Retrieve the authenticated user session
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (data) {
-      profile = data as UserProfile
-    } else {
-      // Fallback if profile trigger hasn't finished replication yet
-      profile = {
-        nama_lengkap: user.email || 'Pegawai',
-        role: 'pemohon',
+    if (user) {
+      // Fetch profile data matching user id
+      const { data } = await supabase
+        .from('profiles')
+        .select('nama_lengkap, role, avatar_url')
+        .eq('id', user.id)
+        .single()
+
+      if (data) {
+        profile = data as UserProfile
+      } else {
+        // Fallback if profile trigger hasn't finished replication yet
+        profile = {
+          nama_lengkap: user.email || 'Pegawai',
+          role: 'pemohon',
+        }
       }
     }
+  } catch (error) {
+    console.error('Error in DashboardLayout:', error)
   }
 
   return (

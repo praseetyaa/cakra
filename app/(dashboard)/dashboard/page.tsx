@@ -26,128 +26,142 @@ import {
 import { cn } from '@/lib/utils'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-
-  // 1. Get current authenticated user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return (
-      <div className="space-y-6 text-center py-12">
-        <h1 className="text-xl font-bold text-red-600">Akses Ditolak</h1>
-        <p className="text-slate-500">Silakan login untuk mengakses dashboard.</p>
-      </div>
-    )
-  }
-
-  // 2. Fetch profile role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, nama_lengkap')
-    .eq('id', user.id)
-    .single()
-
-  const userRole = profile?.role || 'pemohon'
-  const isStaff = ['pengelola', 'pimpinan', 'admin'].includes(userRole)
-
-  // 3. Define time benchmarks
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-
-  // 4. Query statistics counts
-  // Today's Requests
-  let todayQuery = supabase
-    .from('permintaan')
-    .select('*', { count: 'exact', head: true })
-    .gte('tanggal', todayStart)
-  if (!isStaff) {
-    todayQuery = todayQuery.eq('pemohon_id', user.id)
-  }
-  const { count: todayCount } = await todayQuery
-
-  // Pending Approvals
-  let pendingQuery = supabase
-    .from('permintaan')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'menunggu')
-  if (!isStaff) {
-    pendingQuery = pendingQuery.eq('pemohon_id', user.id)
-  }
-  const { count: pendingCount } = await pendingQuery
-
-  // Monthly Transactions / Volume
+  let user = null
+  let profile = null
+  let userRole = 'pemohon'
+  let isStaff = false
+  let todayCount = 0
+  let pendingCount = 0
   let monthTrxCount = 0
-  if (isStaff) {
-    // Staff: Total transacted item volume (outbound amount sum)
-    const { data: rs } = await supabase
-      .from('riwayat_stok')
-      .select('jumlah')
-      .eq('jenis', 'keluar')
-      .gte('created_at', monthStart)
-    monthTrxCount = rs ? rs.reduce((acc, curr) => acc + Math.abs(curr.jumlah), 0) : 0
-  } else {
-    // Pemohon: Total approved requests of this user this month
-    const { count: c } = await supabase
+  let criticalCount = 0
+  let criticalItems: Array<{ id: string; nama: string; stok: number; satuan: string; stok_minimum: number; status: string }> = []
+  let chartData: Array<{ tanggal: string; transaksi: number }> = []
+
+  try {
+    const supabase = await createClient()
+
+    // 1. Get current authenticated user
+    const { data: userData } = await supabase.auth.getUser()
+    user = userData?.user || null
+
+    if (!user) {
+      return (
+        <div className="space-y-6 text-center py-12">
+          <h1 className="text-xl font-bold text-red-600">Akses Ditolak</h1>
+          <p className="text-slate-500">Silakan login untuk mengakses dashboard.</p>
+        </div>
+      )
+    }
+
+    // 2. Fetch profile role
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('role, nama_lengkap')
+      .eq('id', user.id)
+      .single()
+
+    profile = profileData
+    userRole = profile?.role || 'pemohon'
+    isStaff = ['pengelola', 'pimpinan', 'admin'].includes(userRole)
+
+    // 3. Define time benchmarks
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+    // 4. Query statistics counts
+    let todayQuery = supabase
       .from('permintaan')
       .select('*', { count: 'exact', head: true })
-      .eq('pemohon_id', user.id)
-      .eq('status', 'disetujui')
-      .gte('tanggal', monthStart)
-    monthTrxCount = c || 0
-  }
-
-  // Critical Stock Count (under minimum limit - global)
-  const { count: criticalCount } = await supabase
-    .from('barang')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'Menipis')
-
-  // Top 5 critical items list
-  const { data: criticalItems } = await supabase
-    .from('barang')
-    .select('id, nama, stok, satuan, stok_minimum, status')
-    .eq('status', 'Menipis')
-    .order('stok', { ascending: true })
-    .limit(5)
-
-  // 5. Query 7-day transaction chart points
-  const chartData = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    d.setHours(0, 0, 0, 0)
-    const dayStart = d.toISOString()
-
-    const nextD = new Date(d)
-    nextD.setDate(nextD.getDate() + 1)
-    const dayEnd = nextD.toISOString()
-
-    let count = 0
+      .gte('tanggal', todayStart)
     if (!isStaff) {
-      const { count: c } = await supabase
-        .from('permintaan')
-        .select('*', { count: 'exact', head: true })
-        .eq('pemohon_id', user.id)
-        .gte('tanggal', dayStart)
-        .lt('tanggal', dayEnd)
-      count = c || 0
-    } else {
+      todayQuery = todayQuery.eq('pemohon_id', user.id)
+    }
+    const { count: tc } = await todayQuery
+    todayCount = tc || 0
+
+    // Pending Approvals
+    let pendingQuery = supabase
+      .from('permintaan')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'menunggu')
+    if (!isStaff) {
+      pendingQuery = pendingQuery.eq('pemohon_id', user.id)
+    }
+    const { count: pc } = await pendingQuery
+    pendingCount = pc || 0
+
+    // Monthly Transactions / Volume
+    if (isStaff) {
       const { data: rs } = await supabase
         .from('riwayat_stok')
         .select('jumlah')
         .eq('jenis', 'keluar')
-        .gte('created_at', dayStart)
-        .lt('created_at', dayEnd)
-      count = rs ? rs.reduce((acc, curr) => acc + Math.abs(curr.jumlah), 0) : 0
+        .gte('created_at', monthStart)
+      monthTrxCount = rs ? rs.reduce((acc, curr) => acc + Math.abs(curr.jumlah), 0) : 0
+    } else {
+      const { count: c } = await supabase
+        .from('permintaan')
+        .select('*', { count: 'exact', head: true })
+        .eq('pemohon_id', user.id)
+        .eq('status', 'disetujui')
+        .gte('tanggal', monthStart)
+      monthTrxCount = c || 0
     }
 
-    chartData.push({
-      tanggal: d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }),
-      transaksi: count,
-    })
+    // Critical Stock Count
+    const { count: cc } = await supabase
+      .from('barang')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'Menipis')
+    criticalCount = cc || 0
+
+    // Top 5 critical items list
+    const { data: ci } = await supabase
+      .from('barang')
+      .select('id, nama, stok, satuan, stok_minimum, status')
+      .eq('status', 'Menipis')
+      .order('stok', { ascending: true })
+      .limit(5)
+    criticalItems = ci || []
+
+    // 5. Query 7-day transaction chart points
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      d.setHours(0, 0, 0, 0)
+      const dayStart = d.toISOString()
+
+      const nextD = new Date(d)
+      nextD.setDate(nextD.getDate() + 1)
+      const dayEnd = nextD.toISOString()
+
+      let count = 0
+      if (!isStaff) {
+        const { count: c } = await supabase
+          .from('permintaan')
+          .select('*', { count: 'exact', head: true })
+          .eq('pemohon_id', user.id)
+          .gte('tanggal', dayStart)
+          .lt('tanggal', dayEnd)
+        count = c || 0
+      } else {
+        const { data: rs } = await supabase
+          .from('riwayat_stok')
+          .select('jumlah')
+          .eq('jenis', 'keluar')
+          .gte('created_at', dayStart)
+          .lt('created_at', dayEnd)
+        count = rs ? rs.reduce((acc, curr) => acc + Math.abs(curr.jumlah), 0) : 0
+      }
+
+      chartData.push({
+        tanggal: d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }),
+        transaksi: count,
+      })
+    }
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error)
   }
 
   return (
