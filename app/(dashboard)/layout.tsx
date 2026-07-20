@@ -10,6 +10,8 @@ interface UserProfile {
   avatar_url?: string | null
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -43,7 +45,10 @@ export default async function DashboardLayout({
         }
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw error
+    }
     console.error('Error in DashboardLayout:', error)
   }
 

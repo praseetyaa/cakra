@@ -160,7 +160,10 @@ export default async function DashboardPage() {
         transaksi: count,
       })
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+      throw error
+    }
     console.error('Error fetching dashboard data:', error)
   }
 
