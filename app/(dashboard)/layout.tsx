@@ -1,4 +1,5 @@
 import React from 'react'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/shared/Sidebar'
 import Navbar from '@/components/shared/Navbar'
@@ -17,6 +18,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  let user = null
   let profile: UserProfile | null = null
 
   try {
@@ -24,8 +26,10 @@ export default async function DashboardLayout({
     
     // Retrieve the authenticated user session
     const {
-      data: { user },
+      data: { user: authUser },
     } = await supabase.auth.getUser()
+
+    user = authUser
 
     if (user) {
       // Fetch profile data matching user id
@@ -46,10 +50,14 @@ export default async function DashboardLayout({
       }
     }
   } catch (error: any) {
-    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+    if (error?.digest?.startsWith?.('NEXT_REDIRECT') || error?.digest === 'DYNAMIC_SERVER_USAGE') {
       throw error
     }
     console.error('Error in DashboardLayout:', error)
+  }
+
+  if (!user) {
+    redirect('/login')
   }
 
   return (

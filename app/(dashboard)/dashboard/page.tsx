@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StatCard from '@/components/dashboard/StatCard'
 import GrafikTransaksi from '@/components/dashboard/GrafikTransaksi'
@@ -45,12 +46,7 @@ export default async function DashboardPage() {
     user = userData?.user || null
 
     if (!user) {
-      return (
-        <div className="space-y-6 text-center py-12">
-          <h1 className="text-xl font-bold text-red-600">Akses Ditolak</h1>
-          <p className="text-slate-500">Silakan login untuk mengakses dashboard.</p>
-        </div>
-      )
+      redirect('/login')
     }
 
     // 2. Fetch profile role
@@ -161,7 +157,7 @@ export default async function DashboardPage() {
       })
     }
   } catch (error: any) {
-    if (error?.digest === 'DYNAMIC_SERVER_USAGE') {
+    if (error?.digest?.startsWith?.('NEXT_REDIRECT') || error?.digest === 'DYNAMIC_SERVER_USAGE') {
       throw error
     }
     console.error('Error fetching dashboard data:', error)
