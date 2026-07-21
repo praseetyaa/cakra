@@ -21,23 +21,38 @@ export interface RiwayatBarangKeluarItem {
   } | null
 }
 
-export async function getRiwayatBarangKeluar(): Promise<RiwayatBarangKeluarItem[]> {
+export interface PaginatedRiwayatResponse {
+  data: RiwayatBarangKeluarItem[]
+  totalPages: number
+  totalCount: number
+  currentPage: number
+}
+
+export async function getRiwayatBarangKeluar(
+  page: number = 1,
+  pageSize: number = 20
+): Promise<PaginatedRiwayatResponse> {
   const supabase = await createClient()
 
-  // 1. Fetch riwayat_stok where jenis is 'keluar'
-  const { data: logs, error: logsError } = await supabase
+  const safePage = Math.max(1, page)
+  const from = (safePage - 1) * pageSize
+  const to = from + pageSize - 1
+
+  // 1. Fetch riwayat_stok where jenis is 'keluar' with .range() and count
+  const { data: logs, error: logsError, count } = await supabase
     .from('riwayat_stok')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('jenis', 'keluar')
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (logsError) {
     console.error('Error fetching stock history logs:', logsError)
-    return []
+    return { data: [], totalPages: 0, totalCount: 0, currentPage: safePage }
   }
 
   if (!logs || logs.length === 0) {
-    return []
+    return { data: [], totalPages: 0, totalCount: count || 0, currentPage: safePage }
   }
 
   // 2. Fetch related barang
@@ -88,7 +103,7 @@ export async function getRiwayatBarangKeluar(): Promise<RiwayatBarangKeluarItem[
   }
 
   // 5. Combine and format data
-  return logs.map((log) => {
+  const formattedLogs: RiwayatBarangKeluarItem[] = logs.map((log) => {
     const barang = barangMap.get(log.barang_id) || { nama: 'Barang Terhapus', satuan: 'Unit' }
     const permintaan = log.referensi_id ? permintaanMap.get(log.referensi_id) : null
     const pemohon = permintaan ? profileMap.get(permintaan.pemohon_id) : null
@@ -96,7 +111,7 @@ export async function getRiwayatBarangKeluar(): Promise<RiwayatBarangKeluarItem[
     return {
       id: log.id,
       created_at: log.created_at,
-      jumlah: Math.abs(log.jumlah), // display positive quantity
+      jumlah: Math.abs(log.jumlah),
       keterangan: log.keterangan,
       barang: {
         nama: barang.nama,
@@ -116,4 +131,14 @@ export async function getRiwayatBarangKeluar(): Promise<RiwayatBarangKeluarItem[
         : null,
     }
   })
+
+  const totalCount = count || 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  return {
+    data: formattedLogs,
+    totalPages,
+    totalCount,
+    currentPage: safePage,
+  }
 }

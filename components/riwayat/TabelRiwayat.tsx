@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -11,15 +13,25 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
-import { Search, Calendar, User, Building, Package, Info, ArrowUpRight } from 'lucide-react'
+import { Search, Calendar, User, Building, Package, Info, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { RiwayatBarangKeluarItem } from '@/app/actions/riwayat'
 
 interface TabelRiwayatProps {
   initialLogs: RiwayatBarangKeluarItem[]
+  currentPage: number
+  totalPages: number
+  totalCount: number
 }
 
-export default function TabelRiwayat({ initialLogs }: TabelRiwayatProps) {
+export default function TabelRiwayat({
+  initialLogs,
+  currentPage,
+  totalPages,
+  totalCount
+}: TabelRiwayatProps) {
   const [search, setSearch] = useState('')
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
   const filteredLogs = initialLogs.filter((log) => {
     const searchLower = search.toLowerCase()
@@ -40,6 +52,12 @@ export default function TabelRiwayat({ initialLogs }: TabelRiwayatProps) {
     })
   }
 
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('page', newPage.toString())
+    router.push(`?${params.toString()}`)
+  }
+
   return (
     <div className="space-y-6">
       {/* Search Header */}
@@ -50,8 +68,11 @@ export default function TabelRiwayat({ initialLogs }: TabelRiwayatProps) {
             placeholder="Cari berdasarkan nama barang, pemohon, nomor permintaan, atau unit..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 w-full"
+            className="pl-10 w-full text-xs h-9"
           />
+        </div>
+        <div className="text-xs text-slate-500 shrink-0 font-medium">
+          Total: <span className="font-bold text-slate-800 dark:text-slate-200">{totalCount}</span> transaksi
         </div>
       </div>
 
@@ -130,6 +151,40 @@ export default function TabelRiwayat({ initialLogs }: TabelRiwayatProps) {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination Navigation Footer */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+            <span className="text-xs text-slate-500 font-medium">
+              Halaman <span className="font-bold text-slate-800 dark:text-slate-200">{currentPage}</span> dari{' '}
+              <span className="font-bold text-slate-800 dark:text-slate-200">{totalPages}</span>
+            </span>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="h-8 text-xs px-3"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Sebelumnya
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="h-8 text-xs px-3"
+              >
+                Selanjutnya
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

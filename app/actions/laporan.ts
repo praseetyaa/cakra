@@ -68,7 +68,7 @@ export async function getReportData(
     }))
   } else {
     // Outgoing transactions
-    const logs = await getRiwayatBarangKeluar()
+    const { data: logs } = await getRiwayatBarangKeluar(1, 1000)
     
     // Filter by month & year
     return logs

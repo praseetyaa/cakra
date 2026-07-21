@@ -2,8 +2,15 @@ import React from 'react'
 import { getRiwayatBarangKeluar } from '@/app/actions/riwayat'
 import TabelRiwayat from '@/components/riwayat/TabelRiwayat'
 
-export default async function RiwayatPage() {
-  const logs = await getRiwayatBarangKeluar()
+interface PageProps {
+  searchParams: Promise<{ page?: string }>
+}
+
+export default async function RiwayatPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const page = Number(params?.page) || 1
+
+  const { data: logs, totalPages, totalCount, currentPage } = await getRiwayatBarangKeluar(page, 20)
 
   return (
     <div className="space-y-6">
@@ -16,7 +23,12 @@ export default async function RiwayatPage() {
         </p>
       </div>
 
-      <TabelRiwayat initialLogs={logs} />
+      <TabelRiwayat
+        initialLogs={logs}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+      />
     </div>
   )
 }

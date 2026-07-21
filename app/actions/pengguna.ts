@@ -2,8 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { UserRole } from '@/lib/types'
 
-export type UserRole = 'pemohon' | 'pengelola' | 'pimpinan' | 'admin'
+export type { UserRole }
 
 export interface UserProfileItem {
   id: string
