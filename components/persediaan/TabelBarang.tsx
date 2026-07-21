@@ -147,10 +147,16 @@ export default function TabelBarang({
           </div>
 
           {/* Status filter */}
-          <div className="w-full sm:w-44">
+          <div className="w-full sm:w-44 shrink-0">
             <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'ALL')}>
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder="Status Stok" />
+              <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
+                <SelectValue placeholder="Status Stok">
+                  {statusFilter === 'ALL'
+                    ? 'Semua Status'
+                    : statusFilter === 'Aman'
+                    ? 'Stok Aman'
+                    : 'Stok Menipis'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL" className="text-xs">Semua Status</SelectItem>
@@ -161,10 +167,14 @@ export default function TabelBarang({
           </div>
 
           {/* Category filter */}
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-48 shrink-0">
             <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || 'ALL')}>
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder="Kategori" />
+              <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
+                <SelectValue placeholder="Kategori">
+                  {categoryFilter === 'ALL'
+                    ? 'Semua Kategori'
+                    : categories.find((c) => c.id === categoryFilter)?.nama || 'Kategori'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL" className="text-xs">Semua Kategori</SelectItem>
@@ -180,7 +190,7 @@ export default function TabelBarang({
 
         {/* Add & Import Barang Triggers (restricted) */}
         {isEditable && (
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <Button
               type="button"
               variant="outline"
