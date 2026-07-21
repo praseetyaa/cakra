@@ -31,7 +31,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Search, Plus, Edit, Eye, ShieldAlert, Archive } from 'lucide-react'
+import { Search, Plus, Edit, Eye, ShieldAlert, Archive, FileSpreadsheet } from 'lucide-react'
+import ModalImportBarang from '@/components/persediaan/ModalImportBarang'
 
 export interface Barang {
   id: string
@@ -70,6 +71,7 @@ export default function TabelBarang({
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
   const [selectedBarang, setSelectedBarang] = useState<Barang | null>(null)
   
   // Transition state
@@ -168,18 +170,31 @@ export default function TabelBarang({
           </div>
         </div>
 
-        {/* Add Barang Trigger (restricted) */}
+        {/* Add & Import Barang Triggers (restricted) */}
         {isEditable && (
-          <Button
-            onClick={() => {
-              setFormError(null)
-              setIsAddOpen(true)
-            }}
-            className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-700 text-white font-medium flex items-center justify-center gap-2"
-          >
-            <Plus className="h-4.5 w-4.5" />
-            Tambah Barang
-          </Button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsImportOpen(true)}
+              className="flex-1 sm:flex-initial border-emerald-300 text-emerald-850 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 font-medium flex items-center justify-center gap-2"
+            >
+              <FileSpreadsheet className="h-4.5 w-4.5 text-emerald-700 dark:text-emerald-400" />
+              Import Excel
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => {
+                setFormError(null)
+                setIsAddOpen(true)
+              }}
+              className="flex-1 sm:flex-initial bg-emerald-800 hover:bg-emerald-700 text-white font-medium flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Plus className="h-4.5 w-4.5" />
+              Tambah Barang
+            </Button>
+          </div>
         )}
       </div>
 
@@ -439,6 +454,12 @@ export default function TabelBarang({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal Import Excel Barang */}
+      <ModalImportBarang
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+      />
     </div>
   )
 }

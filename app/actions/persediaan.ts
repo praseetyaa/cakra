@@ -137,3 +137,92 @@ export async function getCategories() {
 
   return categories
 }
+
+export interface ImportBarangItemInput {
+  nama: string
+  kategori_nama?: string
+  satuan: string
+  stok: number
+  stok_minimum: number
+  lokasi?: string
+}
+
+export async function importBarangBulk(items: ImportBarangItemInput[]) {
+  if (!items || items.length === 0) {
+    return { error: 'Daftar barang yang di-import tidak boleh kosong.' }
+  }
+
+  const supabase = await createClient()
+
+  // 1. Security Check: verify user is authenticated and is pengelola or admin
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['pengelola', 'admin'].includes(profile.role)) {
+    return { error: 'Anda tidak memiliki wewenang untuk menambahkan barang.' }
+  }
+
+  // 2. Fetch categories map (name to id)
+  const categories = await getCategories()
+  const categoryMap = new Map(
+    categories.map((c: { id: string; nama: string }) => [c.nama.toLowerCase().trim(), c.id])
+  )
+
+  // 3. Format items for insertion
+  const barangInserts = items.map((item) => {
+    const matchedCategoryId = item.kategori_nama
+      ? categoryMap.get(item.kategori_nama.toLowerCase().trim()) || null
+      : null
+
+    return {
+      nama: item.nama.trim(),
+      kategori_id: matchedCategoryId,
+      satuan: item.satuan.trim() || 'Pcs',
+      stok: Math.max(0, item.stok || 0),
+      stok_minimum: Math.max(0, item.stok_minimum || 0),
+      lokasi: (item.lokasi && item.lokasi.trim()) ? item.lokasi.trim() : 'Gudang Persediaan',
+    }
+  })
+
+  // 4. Batch insert into barang table
+  const { data: insertedBarang, error: insertError } = await supabase
+    .from('barang')
+    .insert(barangInserts)
+    .select()
+
+  if (insertError || !insertedBarang) {
+    return { error: insertError?.message || 'Gagal menyimpan batch barang persediaan.' }
+  }
+
+  // 5. Batch insert initial stock logs for items with stok > 0
+  const historyInserts = insertedBarang
+    .filter((b) => b.stok > 0)
+    .map((b) => ({
+      barang_id: b.id,
+      jumlah: b.stok,
+      jenis: 'masuk',
+      keterangan: 'Stok awal import Excel',
+    }))
+
+  if (historyInserts.length > 0) {
+    const { error: historyError } = await supabase
+      .from('riwayat_stok')
+      .insert(historyInserts)
+
+    if (historyError) {
+      console.error('Failed to log stock history for imported items:', historyError)
+    }
+  }
+
+  revalidatePath('/persediaan')
+  revalidatePath('/riwayat')
+  return { success: true, count: insertedBarang.length }
+}
