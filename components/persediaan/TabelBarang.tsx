@@ -310,7 +310,7 @@ export default function TabelBarang({
             </div>
           )}
 
-          <form onSubmit={handleAddSubmit} className="space-y-4 py-2">
+          <form onSubmit={handleAddSubmit} className="space-y-4 pt-2">
             <div className="space-y-1">
               <Label htmlFor="nama">Nama Barang</Label>
               <Input id="nama" name="nama" placeholder="Kertas HVS A4 80gr" required />
@@ -354,7 +354,7 @@ export default function TabelBarang({
               </div>
             </div>
 
-            <DialogFooter className="pt-2">
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
                 Batal
               </Button>
@@ -384,7 +384,7 @@ export default function TabelBarang({
           )}
 
           {selectedBarang && (
-            <form onSubmit={handleEditSubmit} className="space-y-4 py-2">
+            <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
               <div className="space-y-1">
                 <Label htmlFor="edit-nama">Nama Barang</Label>
                 <Input
@@ -442,7 +442,7 @@ export default function TabelBarang({
                 />
               </div>
 
-              <DialogFooter className="pt-2">
+              <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
                   Batal
                 </Button>
