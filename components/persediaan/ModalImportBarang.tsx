@@ -73,6 +73,9 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
 
     // Define Columns
     worksheet.columns = [
+      { header: 'Kd Brng', key: 'kd_brng', width: 14 },
+      { header: 'Kd Barang', key: 'kd_barang', width: 16 },
+      { header: 'Kode Barang Lengkap', key: 'kode_barang_lengkap', width: 22 },
       { header: 'Nama Barang', key: 'nama', width: 32 },
       { header: 'Kategori', key: 'kategori_nama', width: 26 },
       { header: 'Satuan', key: 'satuan', width: 14 },
@@ -93,27 +96,36 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
 
     // Add sample rows
     worksheet.addRow({
+      kd_brng: '000003',
+      kd_barang: '1010301001',
+      kode_barang_lengkap: '1010301001000003',
+      nama: 'BALLPOINT CLICK',
+      kategori_nama: 'Alat Tulis Kantor (ATK)',
+      satuan: 'PCS',
+      stok: 28,
+      stok_minimum: 5,
+      lokasi: 'Gudang Persediaan Utama',
+    })
+    worksheet.addRow({
+      kd_brng: '000004',
+      kd_barang: '1010301001',
+      kode_barang_lengkap: '1010301001000004',
+      nama: 'SPIDOL BESAR BOARDMARKER HITAM',
+      kategori_nama: 'Alat Tulis Kantor (ATK)',
+      satuan: 'PCS',
+      stok: 10,
+      stok_minimum: 5,
+      lokasi: 'Gudang Persediaan Utama',
+    })
+    worksheet.addRow({
+      kd_brng: '000002',
+      kd_barang: '1010199999',
+      kode_barang_lengkap: '1010199999000002',
       nama: 'Kertas A4 70gr PaperOne',
       kategori_nama: 'Kertas & Catatan',
       satuan: 'Rim',
       stok: 50,
       stok_minimum: 10,
-      lokasi: 'Gudang Persediaan Utama',
-    })
-    worksheet.addRow({
-      nama: 'Pulpen Standard AE7 Hitam',
-      kategori_nama: 'Alat Tulis Kantor (ATK)',
-      satuan: 'Box',
-      stok: 20,
-      stok_minimum: 5,
-      lokasi: 'Gudang Persediaan Utama',
-    })
-    worksheet.addRow({
-      nama: 'Stopmap Folio Hijau Snelhecter',
-      kategori_nama: 'Arsip & Map',
-      satuan: 'Buah',
-      stok: 100,
-      stok_minimum: 15,
       lokasi: 'Gudang Persediaan',
     })
 
@@ -171,7 +183,20 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
 
       // Smart Header Row & Column Mapping Detection
       let headerRowIndex = -1
-      const colMap: { nama: number; kategori: number; satuan: number; stok: number; stok_min: number; lokasi: number } = {
+      const colMap: {
+        kd_brng: number
+        kd_barang: number
+        kode_barang_lengkap: number
+        nama: number
+        kategori: number
+        satuan: number
+        stok: number
+        stok_min: number
+        lokasi: number
+      } = {
+        kd_brng: -1,
+        kd_barang: -1,
+        kode_barang_lengkap: -1,
         nama: -1,
         kategori: -1,
         satuan: -1,
@@ -190,7 +215,10 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
           headerRowIndex = rowNumber
           values.forEach((v, idx) => {
             if (typeof v !== 'string' || !v) return
-            if (v.includes('deskripsi') || v.includes('nama barang') || v === 'nama') colMap.nama = idx
+            if (v.includes('kode barang lengkap') || v.includes('kode_barang_lengkap') || v.includes('kd barang lengkap')) colMap.kode_barang_lengkap = idx
+            else if (v.includes('kd brng') || v.includes('kd_brng') || v.includes('kode brng')) colMap.kd_brng = idx
+            else if ((v.includes('kd barang') || v.includes('kd_barang') || v.includes('kode barang')) && !v.includes('lengkap')) colMap.kd_barang = idx
+            else if (v.includes('deskripsi') || v.includes('nama barang') || v === 'nama') colMap.nama = idx
             else if (v.includes('satuan')) colMap.satuan = idx
             else if (v.includes('stok') || v.includes('jumlah')) colMap.stok = idx
             else if (v.includes('kategori')) colMap.kategori = idx
@@ -203,12 +231,15 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
       // Fallback if header wasn't dynamically detected (assume row 1 default layout)
       if (headerRowIndex === -1) {
         headerRowIndex = 1
-        colMap.nama = 1
-        colMap.kategori = 2
-        colMap.satuan = 3
-        colMap.stok = 4
-        colMap.stok_min = 5
-        colMap.lokasi = 6
+        colMap.kd_brng = 1
+        colMap.kd_barang = 2
+        colMap.kode_barang_lengkap = 3
+        colMap.nama = 4
+        colMap.kategori = 5
+        colMap.satuan = 6
+        colMap.stok = 7
+        colMap.stok_min = 8
+        colMap.lokasi = 9
       }
 
       const items: ImportBarangItemInput[] = []
@@ -222,6 +253,10 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
         const nama = colMap.nama !== -1 ? getStringValue(rowValues[colMap.nama]) : ''
         if (!nama || nama.toLowerCase().includes('jumlah seluruh') || nama.toLowerCase().includes('total')) return
 
+        const kd_brng = colMap.kd_brng !== -1 ? getStringValue(rowValues[colMap.kd_brng]) : undefined
+        const kd_barang = colMap.kd_barang !== -1 ? getStringValue(rowValues[colMap.kd_barang]) : undefined
+        const kode_barang_lengkap = colMap.kode_barang_lengkap !== -1 ? getStringValue(rowValues[colMap.kode_barang_lengkap]) : undefined
+
         const kategori_nama = colMap.kategori !== -1 ? getStringValue(rowValues[colMap.kategori]) : undefined
         const satuan = colMap.satuan !== -1 ? getStringValue(rowValues[colMap.satuan]) || 'Pcs' : 'Pcs'
         const stokStr = colMap.stok !== -1 ? getStringValue(rowValues[colMap.stok]) : '0'
@@ -232,6 +267,9 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
         const stok_minimum = parseInt(stokMinStr, 10)
 
         items.push({
+          kd_brng,
+          kd_barang,
+          kode_barang_lengkap,
           nama,
           kategori_nama: kategori_nama || undefined,
           satuan: satuan || 'Pcs',
@@ -436,17 +474,20 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50 dark:bg-slate-900/50">
+                      <TableHead className="text-[11px] py-2">Kode Barang Lengkap</TableHead>
                       <TableHead className="text-[11px] py-2">Nama Barang</TableHead>
                       <TableHead className="text-[11px] py-2">Kategori</TableHead>
                       <TableHead className="text-[11px] py-2 text-center">Satuan</TableHead>
                       <TableHead className="text-[11px] py-2 text-center">Stok Awal</TableHead>
-                      <TableHead className="text-[11px] py-2 text-center">Min. Stok</TableHead>
                       <TableHead className="text-[11px] py-2">Lokasi Gudang</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {parsedItems.map((item, idx) => (
                       <TableRow key={idx} className="text-xs">
+                        <TableCell className="font-mono text-[11px] text-emerald-800 dark:text-emerald-400 py-2">
+                          {item.kode_barang_lengkap || (item.kd_barang && item.kd_brng ? `${item.kd_barang}${item.kd_brng}` : '-')}
+                        </TableCell>
                         <TableCell className="font-semibold text-slate-800 dark:text-slate-200 py-2">
                           {item.nama}
                         </TableCell>
@@ -458,9 +499,6 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
                         </TableCell>
                         <TableCell className="text-center font-bold text-slate-900 dark:text-white py-2">
                           {item.stok}
-                        </TableCell>
-                        <TableCell className="text-center text-slate-500 py-2">
-                          {item.stok_minimum}
                         </TableCell>
                         <TableCell className="text-slate-500 py-2 truncate max-w-[120px]">
                           {item.lokasi}

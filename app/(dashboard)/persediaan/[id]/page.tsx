@@ -28,6 +28,9 @@ export default async function PersediaanDetailPage({ params }: PageProps) {
     .from('barang')
     .select(`
       id,
+      kd_brng,
+      kd_barang,
+      kode_barang_lengkap,
       nama,
       kategori_id,
       satuan,
@@ -112,8 +115,15 @@ export default async function PersediaanDetailPage({ params }: PageProps) {
           <span className="sr-only">Kembali</span>
         </Link>
         <div>
-          <p className="text-xs text-slate-500 font-medium">Persediaan / Detail Stok</p>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+          <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
+            <span>Persediaan / Detail Stok</span>
+            {(barang.kode_barang_lengkap || barang.kd_barang) && (
+              <span className="font-mono bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 rounded text-[10px] font-semibold border border-emerald-200 dark:border-emerald-800">
+                Kode BMN: {barang.kode_barang_lengkap || `${barang.kd_barang}${barang.kd_brng || ''}`}
+              </span>
+            )}
+          </p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
             {barang.nama}
           </h1>
         </div>

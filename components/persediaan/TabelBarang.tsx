@@ -36,6 +36,9 @@ import ModalImportBarang from '@/components/persediaan/ModalImportBarang'
 
 export interface Barang {
   id: string
+  kd_brng?: string | null
+  kd_barang?: string | null
+  kode_barang_lengkap?: string | null
   nama: string
   kategori_id: string | null
   satuan: string
@@ -82,7 +85,12 @@ export default function TabelBarang({
 
   // Filter items
   const filteredBarang = initialBarang.filter((item) => {
-    const matchesSearch = item.nama.toLowerCase().includes(search.toLowerCase())
+    const query = search.toLowerCase().trim()
+    const matchesSearch =
+      item.nama.toLowerCase().includes(query) ||
+      (item.kode_barang_lengkap && item.kode_barang_lengkap.toLowerCase().includes(query)) ||
+      (item.kd_barang && item.kd_barang.toLowerCase().includes(query)) ||
+      (item.kd_brng && item.kd_brng.toLowerCase().includes(query))
     const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter
     const matchesCategory = categoryFilter === 'ALL' || item.kategori_id === categoryFilter
     return matchesSearch && matchesStatus && matchesCategory
@@ -131,23 +139,23 @@ export default function TabelBarang({
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Cari nama barang..."
+              placeholder="Cari nama atau kode barang BMN..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 text-xs"
             />
           </div>
 
           {/* Status filter */}
           <div className="w-full sm:w-44">
             <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'ALL')}>
-              <SelectTrigger>
+              <SelectTrigger className="text-xs">
                 <SelectValue placeholder="Status Stok" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Semua Status</SelectItem>
-                <SelectItem value="Aman">Stok Aman</SelectItem>
-                <SelectItem value="Menipis">Stok Menipis</SelectItem>
+                <SelectItem value="ALL" className="text-xs">Semua Status</SelectItem>
+                <SelectItem value="Aman" className="text-xs">Stok Aman</SelectItem>
+                <SelectItem value="Menipis" className="text-xs">Stok Menipis</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -155,13 +163,13 @@ export default function TabelBarang({
           {/* Category filter */}
           <div className="w-full sm:w-48">
             <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || 'ALL')}>
-              <SelectTrigger>
+              <SelectTrigger className="text-xs">
                 <SelectValue placeholder="Kategori" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Semua Kategori</SelectItem>
+                <SelectItem value="ALL" className="text-xs">Semua Kategori</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
+                  <SelectItem key={cat.id} value={cat.id} className="text-xs">
                     {cat.nama}
                   </SelectItem>
                 ))}
@@ -177,7 +185,7 @@ export default function TabelBarang({
               type="button"
               variant="outline"
               onClick={() => setIsImportOpen(true)}
-              className="flex-1 sm:flex-initial border-emerald-300 text-emerald-850 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 font-medium flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-initial border-emerald-300 text-emerald-850 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 font-medium flex items-center justify-center gap-2 text-xs"
             >
               <FileSpreadsheet className="h-4.5 w-4.5 text-emerald-700 dark:text-emerald-400" />
               Import Excel
@@ -189,7 +197,7 @@ export default function TabelBarang({
                 setFormError(null)
                 setIsAddOpen(true)
               }}
-              className="flex-1 sm:flex-initial bg-emerald-800 hover:bg-emerald-700 text-white font-medium flex items-center justify-center gap-2 shadow-sm"
+              className="flex-1 sm:flex-initial bg-emerald-800 hover:bg-emerald-700 text-white font-medium flex items-center justify-center gap-2 shadow-sm text-xs"
             >
               <Plus className="h-4.5 w-4.5" />
               Tambah Barang
@@ -203,21 +211,25 @@ export default function TabelBarang({
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50">
-              <TableHead>Nama Barang</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead className="text-center">Stok</TableHead>
-              <TableHead className="text-center">Min. Stok</TableHead>
-              <TableHead>Satuan</TableHead>
-              <TableHead>Lokasi</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
+              <TableHead className="text-xs">Kode Barang</TableHead>
+              <TableHead className="text-xs">Nama Barang</TableHead>
+              <TableHead className="text-xs">Kategori</TableHead>
+              <TableHead className="text-xs text-center">Stok</TableHead>
+              <TableHead className="text-xs text-center">Min. Stok</TableHead>
+              <TableHead className="text-xs">Satuan</TableHead>
+              <TableHead className="text-xs">Lokasi</TableHead>
+              <TableHead className="text-xs text-center">Status</TableHead>
+              <TableHead className="text-xs text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredBarang.length > 0 ? (
               filteredBarang.map((item) => (
-                <TableRow key={item.id} className="hover:bg-slate-50/55 dark:hover:bg-slate-800/30">
-                  <TableCell className="font-semibold text-slate-800 dark:text-slate-200">
+                <TableRow key={item.id} className="hover:bg-slate-50/55 dark:hover:bg-slate-800/30 text-xs">
+                  <TableCell className="font-mono text-emerald-800 dark:text-emerald-400 text-xs py-3">
+                    {item.kode_barang_lengkap || (item.kd_barang && item.kd_brng ? `${item.kd_barang}${item.kd_brng}` : item.kd_barang || item.kd_brng || '-')}
+                  </TableCell>
+                  <TableCell className="font-semibold text-slate-800 dark:text-slate-200 py-3">
                     {item.nama}
                   </TableCell>
                   <TableCell className="text-slate-500">
@@ -315,6 +327,21 @@ export default function TabelBarang({
                 </div>
               )}
 
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="kd_brng" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kd Brng</Label>
+                  <Input id="kd_brng" name="kd_brng" placeholder="000003" className="text-xs font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="kd_barang" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kd Barang</Label>
+                  <Input id="kd_barang" name="kd_barang" placeholder="1010301001" className="text-xs font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="kode_barang_lengkap" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kode Lengkap</Label>
+                  <Input id="kode_barang_lengkap" name="kode_barang_lengkap" placeholder="1010301001000003" className="text-xs font-mono" />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="nama" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Barang</Label>
                 <Input id="nama" name="nama" placeholder="Kertas HVS A4 80gr" required className="text-xs" />
@@ -393,6 +420,21 @@ export default function TabelBarang({
                     <span>{formError}</span>
                   </div>
                 )}
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-kd_brng" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kd Brng</Label>
+                    <Input id="edit-kd_brng" name="kd_brng" defaultValue={selectedBarang.kd_brng || ''} placeholder="000003" className="text-xs font-mono" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-kd_barang" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kd Barang</Label>
+                    <Input id="edit-kd_barang" name="kd_barang" defaultValue={selectedBarang.kd_barang || ''} placeholder="1010301001" className="text-xs font-mono" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-kode_barang_lengkap" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kode Lengkap</Label>
+                    <Input id="edit-kode_barang_lengkap" name="kode_barang_lengkap" defaultValue={selectedBarang.kode_barang_lengkap || ''} placeholder="1010301001000003" className="text-xs font-mono" />
+                  </div>
+                </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-nama" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Barang</Label>

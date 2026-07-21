@@ -32,6 +32,9 @@ export default async function PersediaanPage() {
     .from('barang')
     .select(`
       id,
+      kd_brng,
+      kd_barang,
+      kode_barang_lengkap,
       nama,
       kategori_id,
       satuan,

@@ -30,6 +30,9 @@ export interface KategoriBarang {
 
 export interface Barang {
   id: string
+  kd_brng?: string | null
+  kd_barang?: string | null
+  kode_barang_lengkap?: string | null
   nama: string
   kategori_id: string | null
   satuan: string

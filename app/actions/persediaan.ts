@@ -4,12 +4,16 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function createBarang(prevState: unknown, formData: FormData) {
-  const nama = formData.get('nama') as string
+  const kd_brng = (formData.get('kd_brng') as string || '').trim() || null
+  const kd_barang = (formData.get('kd_barang') as string || '').trim() || null
+  const kode_barang_lengkap = (formData.get('kode_barang_lengkap') as string || '').trim() || null
+
+  const nama = (formData.get('nama') as string || '').trim()
   const kategori_id = formData.get('kategori_id') as string
-  const satuan = formData.get('satuan') as string
+  const satuan = (formData.get('satuan') as string || '').trim()
   const stok = parseInt(formData.get('stok') as string || '0', 10)
   const stok_minimum = parseInt(formData.get('stok_minimum') as string || '0', 10)
-  const lokasi = formData.get('lokasi') as string || 'Gudang Persediaan'
+  const lokasi = (formData.get('lokasi') as string || '').trim() || 'Gudang Persediaan'
 
   if (!nama || !satuan) {
     return { error: 'Nama barang dan satuan wajib diisi.' }
@@ -26,6 +30,9 @@ export async function createBarang(prevState: unknown, formData: FormData) {
     .from('barang')
     .insert([
       {
+        kd_brng,
+        kd_barang,
+        kode_barang_lengkap,
         nama,
         kategori_id: kategori_id || null,
         satuan,
@@ -55,7 +62,6 @@ export async function createBarang(prevState: unknown, formData: FormData) {
       ])
 
     if (historyError) {
-      // Log error but don't fail the whole request, since the item is already created
       console.error('Failed to write initial stock history:', historyError)
     }
   }
@@ -65,11 +71,15 @@ export async function createBarang(prevState: unknown, formData: FormData) {
 }
 
 export async function updateBarang(id: string, prevState: unknown, formData: FormData) {
-  const nama = formData.get('nama') as string
+  const kd_brng = (formData.get('kd_brng') as string || '').trim() || null
+  const kd_barang = (formData.get('kd_barang') as string || '').trim() || null
+  const kode_barang_lengkap = (formData.get('kode_barang_lengkap') as string || '').trim() || null
+
+  const nama = (formData.get('nama') as string || '').trim()
   const kategori_id = formData.get('kategori_id') as string
-  const satuan = formData.get('satuan') as string
+  const satuan = (formData.get('satuan') as string || '').trim()
   const stok_minimum = parseInt(formData.get('stok_minimum') as string || '0', 10)
-  const lokasi = formData.get('lokasi') as string || 'Gudang Persediaan'
+  const lokasi = (formData.get('lokasi') as string || '').trim() || 'Gudang Persediaan'
 
   if (!nama || !satuan) {
     return { error: 'Nama barang dan satuan wajib diisi.' }
@@ -84,6 +94,9 @@ export async function updateBarang(id: string, prevState: unknown, formData: For
   const { error } = await supabase
     .from('barang')
     .update({
+      kd_brng,
+      kd_barang,
+      kode_barang_lengkap,
       nama,
       kategori_id: kategori_id || null,
       satuan,
@@ -139,6 +152,9 @@ export async function getCategories() {
 }
 
 export interface ImportBarangItemInput {
+  kd_brng?: string
+  kd_barang?: string
+  kode_barang_lengkap?: string
   nama: string
   kategori_nama?: string
   satuan: string
@@ -183,6 +199,9 @@ export async function importBarangBulk(items: ImportBarangItemInput[]) {
       : null
 
     return {
+      kd_brng: item.kd_brng ? item.kd_brng.trim() : null,
+      kd_barang: item.kd_barang ? item.kd_barang.trim() : null,
+      kode_barang_lengkap: item.kode_barang_lengkap ? item.kode_barang_lengkap.trim() : null,
       nama: item.nama.trim(),
       kategori_id: matchedCategoryId,
       satuan: item.satuan.trim() || 'Pcs',
