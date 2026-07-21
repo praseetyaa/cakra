@@ -265,7 +265,7 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 pt-5 pb-8 space-y-6">
           {/* Download Template Banner */}
           <div className="p-4 bg-emerald-50/70 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 rounded-xl flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
@@ -423,7 +423,7 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
           )}
         </div>
 
-        <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 gap-2">
+        <DialogFooter className="mx-0 mb-0 p-4 px-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 gap-2 flex flex-row items-center justify-end">
           <Button
             type="button"
             variant="outline"
