@@ -8,19 +8,26 @@ import {
   ClipboardList,
   Package,
   FileText,
-  User
+  User,
+  Users
 } from 'lucide-react'
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/permintaan', label: 'Permintaan', icon: ClipboardList },
-  { href: '/persediaan', label: 'Persediaan', icon: Package },
-  { href: '/laporan', label: 'Laporan', icon: FileText },
-  { href: '/akun', label: 'Akun', icon: User },
-]
+interface BottomNavProps {
+  role?: string
+}
 
-export default function BottomNav() {
+export default function BottomNav({ role }: BottomNavProps) {
   const pathname = usePathname()
+
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/permintaan', label: 'Permintaan', icon: ClipboardList },
+    { href: '/persediaan', label: 'Persediaan', icon: Package },
+    ...(role === 'admin'
+      ? [{ href: '/pengguna', label: 'Pengguna', icon: Users }]
+      : [{ href: '/laporan', label: 'Laporan', icon: FileText }]),
+    { href: '/akun', label: 'Akun', icon: User },
+  ]
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 flex justify-around items-center z-50 backdrop-blur-md shadow-lg px-2">

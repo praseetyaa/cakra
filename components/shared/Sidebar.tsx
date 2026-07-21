@@ -10,6 +10,7 @@ import {
   Package,
   FileText,
   User,
+  Users,
   LogOut,
   ChevronRight,
   Bell
@@ -26,17 +27,20 @@ interface SidebarProps {
   profile: UserProfile | null
 }
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/permintaan', label: 'Permintaan', icon: ClipboardList },
-  { href: '/persediaan', label: 'Persediaan', icon: Package },
-  { href: '/laporan', label: 'Laporan', icon: FileText },
-  { href: '/akun', label: 'Akun Saya', icon: User },
-]
-
 export default function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname()
   const [unreadCount, setUnreadCount] = React.useState(0)
+
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/permintaan', label: 'Permintaan', icon: ClipboardList },
+    { href: '/persediaan', label: 'Persediaan', icon: Package },
+    { href: '/laporan', label: 'Laporan', icon: FileText },
+    ...(profile?.role === 'admin'
+      ? [{ href: '/pengguna', label: 'Kelola Pengguna', icon: Users }]
+      : []),
+    { href: '/akun', label: 'Akun Saya', icon: User },
+  ]
 
   React.useEffect(() => {
     const supabase = createClient()

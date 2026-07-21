@@ -78,7 +78,7 @@ export default async function DashboardLayout({
         </main>
 
         {/* Mobile Bottom Navigation Bar */}
-        <BottomNav />
+        <BottomNav role={profile?.role} />
       </div>
     </div>
   )

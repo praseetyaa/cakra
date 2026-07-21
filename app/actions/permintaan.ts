@@ -123,7 +123,10 @@ export async function resolvePermintaan(id: string, status: 'disetujui' | 'ditol
     .eq('id', id)
 
   if (error) {
-    return { error: error.message }
+    if (error.message && error.message.includes('tidak mencukupi')) {
+      return { error: error.message }
+    }
+    return { error: error.message || 'Gagal memproses permintaan. Silakan coba lagi.' }
   }
 
   revalidatePath('/permintaan')

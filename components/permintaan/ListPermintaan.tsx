@@ -7,6 +7,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/shared/StatusBadge'
 import {
   Table,
   TableBody,
@@ -231,24 +232,7 @@ export default function ListPermintaan({
                         {req.keperluan}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'text-xs font-semibold px-2.5 py-0.5 border',
-                            req.status === 'disetujui'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900'
-                              : req.status === 'ditolak'
-                              ? 'bg-red-50 text-red-800 border-red-300 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
-                              : 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
-                          )}
-                        >
-                          <span className="flex items-center gap-1">
-                            {req.status === 'disetujui' && <CheckCircle2 className="h-3 w-3" />}
-                            {req.status === 'ditolak' && <XCircle className="h-3 w-3" />}
-                            {req.status === 'menunggu' && <Clock className="h-3 w-3" />}
-                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
-                          </span>
-                        </Badge>
+                        <StatusBadge status={req.status} />
                       </TableCell>
                       <TableCell className="text-right">
                         <Link

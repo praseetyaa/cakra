@@ -2,6 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/shared/StatusBadge'
 import { buttonVariants } from '@/components/ui/button'
 import {
   Table,
@@ -186,24 +187,7 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
               {/* Status Badge */}
               <div className="flex justify-between items-center py-1">
                 <span className="text-sm text-slate-400">Status</span>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'text-xs font-bold px-3 py-1 border',
-                    request.status === 'disetujui'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/20 dark:text-emerald-450'
-                      : request.status === 'ditolak'
-                      ? 'bg-red-50 text-red-800 border-red-300 dark:bg-red-950/20 dark:text-red-450'
-                      : 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/20 dark:text-amber-450'
-                  )}
-                >
-                  <span className="flex items-center gap-1">
-                    {request.status === 'disetujui' && <CheckCircle2 className="h-3.5 w-3.5" />}
-                    {request.status === 'ditolak' && <XCircle className="h-3.5 w-3.5" />}
-                    {request.status === 'menunggu' && <Clock className="h-3.5 w-3.5" />}
-                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                  </span>
-                </Badge>
+                <StatusBadge status={request.status} />
               </div>
 
               {/* Pemohon */}

@@ -169,6 +169,20 @@ declare
   sisa_stok integer;
 begin
   if new.status = 'disetujui' and old.status = 'menunggu' then
+    -- STEP VALIDASI: Cek ketersediaan stok untuk SEMUA item sebelum ada perubahan stok
+    for item in
+      select pd.jumlah, b.nama, b.stok
+      from permintaan_detail pd
+      join barang b on b.id = pd.barang_id
+      where pd.permintaan_id = new.id
+    loop
+      if item.stok < item.jumlah then
+        raise exception 'Stok % tidak mencukupi (tersedia: %, diminta: %)',
+          item.nama, item.stok, item.jumlah
+          using errcode = 'P0001', hint = 'STOCK_INSUFFICIENT';
+      end if;
+    end loop;
+
     -- loop semua item di permintaan ini
     for item in
       select * from permintaan_detail where permintaan_id = new.id
@@ -229,11 +243,13 @@ returns text as $$
   select role from public.profiles where id = user_id;
 $$ language sql security definer;
 
--- PROFILES: user bisa lihat & update profil sendiri; pengelola/pimpinan/admin bisa lihat semua
+-- PROFILES: user bisa lihat & update profil sendiri; pengelola/pimpinan/admin bisa lihat semua; admin bisa ubah role
 create policy "profiles_select" on profiles for select
   using (auth.uid() = id or get_user_role(auth.uid()) in ('pengelola','pimpinan','admin'));
 create policy "profiles_update_own" on profiles for update
   using (auth.uid() = id);
+create policy "profiles_update_role_by_admin" on profiles for update
+  using (get_user_role(auth.uid()) = 'admin');
 
 -- BARANG: semua user login bisa lihat; hanya pengelola/admin bisa insert/update
 create policy "barang_select" on barang for select using (auth.role() = 'authenticated');

@@ -37,6 +37,7 @@ Jangan menambahkan library alternatif (mis. Firebase, Redux, styled-components) 
     /riwayat/page.tsx
     /laporan/page.tsx
     /notifikasi/page.tsx
+    /pengguna/page.tsx   <- manajemen role user (khusus admin)
     /akun/page.tsx
     layout.tsx        <- shared sidebar/bottom-nav
 /components
@@ -44,6 +45,7 @@ Jangan menambahkan library alternatif (mis. Firebase, Redux, styled-components) 
   /dashboard         <- StatCard, GrafikTransaksi, dll
   /permintaan        <- FormPermintaan, ListPermintaan, DetailPermintaan
   /persediaan        <- TabelBarang, FormBarang, DetailStok
+  /pengguna          <- TabelPengguna
   /shared            <- Navbar, Sidebar, BottomNav, StatusBadge
 /lib
   /supabase
@@ -51,7 +53,7 @@ Jangan menambahkan library alternatif (mis. Firebase, Redux, styled-components) 
     server.ts        <- server client (untuk Server Components/Actions)
   /types.ts          <- TypeScript types hasil generate dari skema Supabase
   /utils.ts
-/app/actions         <- Server Actions (create permintaan, approve, dll)
+/app/actions         <- Server Actions (permintaan, auth, pengguna, dll)
 ```
 
 ## 4. Konvensi Coding
