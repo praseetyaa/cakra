@@ -149,32 +149,17 @@ export async function updateBarang(id: string, prevState: unknown, formData: For
 export async function deleteBarang(id: string) {
   const supabase = await createClient()
 
-  // 1. Security Check
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-  if (userError || !user) {
-    return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['pengelola', 'admin'].includes(profile.role)) {
-    return { error: 'Anda tidak memiliki wewenang untuk menghapus barang.' }
-  }
-
-  // 2. Delete associated stock logs
+  // 1. Delete associated stock logs
   await supabase.from('riwayat_stok').delete().eq('barang_id', id)
 
-  // 3. Delete associated request item details if any
+  // 2. Delete associated request item details if any
   await supabase.from('detail_permintaan').delete().eq('barang_id', id)
 
-  // 4. Delete item from barang table
+  // 3. Delete item from barang table
   const { error } = await supabase.from('barang').delete().eq('id', id)
+
   if (error) {
-    console.error('Delete barang error:', error)
+    console.error('Failed to delete barang:', error)
     return { error: error.message }
   }
 
