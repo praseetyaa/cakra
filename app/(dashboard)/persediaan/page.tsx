@@ -28,7 +28,10 @@ export default async function PersediaanPage() {
   const categories = await getCategories()
 
   // 3. Fetch barang data (ordered by name)
-  const { data: barangList, error } = await supabase
+  let barangList: Record<string, unknown>[] | null = null
+  let error: { message: string } | null = null
+
+  const { data: initialData, error: initialError } = await supabase
     .from('barang')
     .select(`
       id,
@@ -48,7 +51,28 @@ export default async function PersediaanPage() {
     `)
     .order('nama', { ascending: true })
 
-  if (error) {
+  barangList = (initialData as unknown as Record<string, unknown>[]) || null
+  error = initialError
+
+  if (error && (error.message.includes('schema cache') || error.message.includes('column'))) {
+    const fallbackRes = await supabase
+      .from('barang')
+      .select(`
+        id,
+        nama,
+        kategori_id,
+        satuan,
+        stok,
+        stok_minimum,
+        lokasi,
+        status,
+        kategori_barang (
+          nama
+        )
+      `)
+      .order('nama', { ascending: true })
+    barangList = (fallbackRes.data as unknown as Record<string, unknown>[]) || null
+  } else if (error) {
     console.error('Failed to fetch inventory:', error)
   }
 

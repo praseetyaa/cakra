@@ -26,23 +26,38 @@ export async function createBarang(prevState: unknown, formData: FormData) {
   const supabase = await createClient()
 
   // 1. Insert the new item
-  const { data: newBarang, error: barangError } = await supabase
+  const fullPayload = {
+    kd_brng,
+    kd_barang,
+    kode_barang_lengkap,
+    nama,
+    kategori_id: kategori_id || null,
+    satuan,
+    stok,
+    stok_minimum,
+    lokasi,
+  }
+
+  let { data: newBarang, error: barangError } = await supabase
     .from('barang')
-    .insert([
-      {
-        kd_brng,
-        kd_barang,
-        kode_barang_lengkap,
-        nama,
-        kategori_id: kategori_id || null,
-        satuan,
-        stok,
-        stok_minimum,
-        lokasi,
-      },
-    ])
+    .insert([fullPayload])
     .select()
     .single()
+
+  // Fallback if DB migration hasn't been executed on Supabase yet
+  if (barangError && (barangError.message.includes('schema cache') || barangError.message.includes('column'))) {
+    const fallbackPayload = {
+      nama,
+      kategori_id: kategori_id || null,
+      satuan,
+      stok,
+      stok_minimum,
+      lokasi,
+    }
+    const res = await supabase.from('barang').insert([fallbackPayload]).select().single()
+    newBarang = res.data
+    barangError = res.error
+  }
 
   if (barangError) {
     return { error: barangError.message }
@@ -91,7 +106,7 @@ export async function updateBarang(id: string, prevState: unknown, formData: For
 
   const supabase = await createClient()
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from('barang')
     .update({
       kd_brng,
@@ -105,6 +120,22 @@ export async function updateBarang(id: string, prevState: unknown, formData: For
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+
+  // Fallback if DB migration hasn't been executed on Supabase yet
+  if (error && (error.message.includes('schema cache') || error.message.includes('column'))) {
+    const res = await supabase
+      .from('barang')
+      .update({
+        nama,
+        kategori_id: kategori_id || null,
+        satuan,
+        stok_minimum,
+        lokasi,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+    error = res.error
+  }
 
   if (error) {
     return { error: error.message }
@@ -212,10 +243,18 @@ export async function importBarangBulk(items: ImportBarangItemInput[]) {
   })
 
   // 4. Batch insert into barang table
-  const { data: insertedBarang, error: insertError } = await supabase
+  let { data: insertedBarang, error: insertError } = await supabase
     .from('barang')
     .insert(barangInserts)
     .select()
+
+  // Fallback if DB migration hasn't been executed on Supabase yet (schema cache error)
+  if (insertError && (insertError.message.includes('schema cache') || insertError.message.includes('column'))) {
+    const fallbackInserts = barangInserts.map(({ kd_brng, kd_barang, kode_barang_lengkap, ...rest }) => rest)
+    const fallbackRes = await supabase.from('barang').insert(fallbackInserts).select()
+    insertedBarang = fallbackRes.data
+    insertError = fallbackRes.error
+  }
 
   if (insertError || !insertedBarang) {
     return { error: insertError?.message || 'Gagal menyimpan batch barang persediaan.' }

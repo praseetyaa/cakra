@@ -24,7 +24,23 @@ export default async function PersediaanDetailPage({ params }: PageProps) {
   const supabase = await createClient()
 
   // 1. Fetch current item details joined with category
-  const { data: barang, error: barangError } = await supabase
+  let barang: {
+    id: string
+    nama: string
+    kategori_id: string | null
+    satuan: string
+    stok: number
+    stok_minimum: number
+    lokasi: string
+    status: string
+    kd_brng?: string | null
+    kd_barang?: string | null
+    kode_barang_lengkap?: string | null
+    kategori_barang?: { nama: string } | { nama: string }[] | null
+  } | null = null
+  let barangError: { message: string } | null = null
+
+  const { data: initialBarang, error: initialError } = await supabase
     .from('barang')
     .select(`
       id,
@@ -44,6 +60,31 @@ export default async function PersediaanDetailPage({ params }: PageProps) {
     `)
     .eq('id', id)
     .single()
+
+  barang = initialBarang
+  barangError = initialError
+
+  if (barangError && (barangError.message.includes('schema cache') || barangError.message.includes('column'))) {
+    const fallbackRes = await supabase
+      .from('barang')
+      .select(`
+        id,
+        nama,
+        kategori_id,
+        satuan,
+        stok,
+        stok_minimum,
+        lokasi,
+        status,
+        kategori_barang (
+          nama
+        )
+      `)
+      .eq('id', id)
+      .single()
+    barang = fallbackRes.data
+    barangError = fallbackRes.error
+  }
 
   if (barangError || !barang) {
     return (
