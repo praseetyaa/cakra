@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Search, Plus, Edit, Eye, ShieldAlert, FileSpreadsheet, Tag, Trash2 } from 'lucide-react'
+import { Search, Plus, Edit, Eye, ShieldAlert, FileSpreadsheet, Tag, Trash2, AlertTriangle } from 'lucide-react'
 import ModalImportBarang from '@/components/persediaan/ModalImportBarang'
 import ModalKelolaKategori from '@/components/persediaan/ModalKelolaKategori'
 
@@ -76,10 +76,12 @@ export default function TabelBarang({
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   
   const [selectedBarang, setSelectedBarang] = useState<Barang | null>(null)
+  const [barangToDelete, setBarangToDelete] = useState<Barang | null>(null)
   
   // Controlled category values for forms
   const [addKategoriId, setAddKategoriId] = useState<string>('')
@@ -145,13 +147,24 @@ export default function TabelBarang({
     })
   }
 
-  // Delete Handler for Item
-  const handleDeleteBarang = async (id: string, nama: string) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus barang "${nama}"?`)) return
+  // Delete Handler for Item via Modal
+  const openDeleteDialog = (item: Barang) => {
+    setBarangToDelete(item)
+    setFormError(null)
+    setIsDeleteOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!barangToDelete) return
+    setFormError(null)
+
     startTransition(async () => {
-      const res = await deleteBarang(id)
+      const res = await deleteBarang(barangToDelete.id)
       if (res.error) {
-        alert(`Gagal menghapus barang: ${res.error}`)
+        setFormError(res.error)
+      } else {
+        setIsDeleteOpen(false)
+        setBarangToDelete(null)
       }
     })
   }
@@ -340,7 +353,7 @@ export default function TabelBarang({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteBarang(item.id, item.nama)}
+                            onClick={() => openDeleteDialog(item)}
                             className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/40 border-red-200 dark:border-red-900/50"
                             title="Hapus Barang"
                           >
@@ -590,6 +603,68 @@ export default function TabelBarang({
         categories={categoryList}
         onCategoriesChange={refreshCategories}
       />
+
+      {/* Confirm Delete Barang Dialog Modal */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-[440px] flex flex-col p-0 overflow-hidden border-slate-200 dark:border-slate-800">
+          <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <DialogTitle className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+              Hapus Barang Persediaan
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Konfirmasi tindakan penghapusan item barang dari sistem persediaan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 space-y-4">
+            {formError && (
+              <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded-lg flex items-start gap-2">
+                <ShieldAlert className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+              Apakah Anda yakin ingin menghapus barang{' '}
+              <span className="font-bold text-slate-900 dark:text-white underline decoration-red-300">
+                {barangToDelete?.nama}
+              </span>
+              {barangToDelete?.kode_barang_lengkap && (
+                <span className="font-mono text-[11px] text-slate-500 ml-1">
+                  ({barangToDelete.kode_barang_lengkap})
+                </span>
+              )}{' '}
+              dari daftar persediaan kantor?
+            </p>
+
+            <div className="p-3 text-xs bg-amber-50 border border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-300 rounded-lg flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <span>Tindakan ini tidak dapat dibatalkan. Riwayat mutasi stok untuk barang ini akan dibersihkan.</span>
+            </div>
+          </div>
+
+          <DialogFooter className="mx-0 mb-0 p-4 px-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 gap-2 flex flex-row items-center justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteOpen(false)}
+              className="text-xs"
+              disabled={isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmDelete}
+              disabled={isPending}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs min-w-[120px]"
+            >
+              {isPending ? 'Menghapus...' : 'Ya, Hapus Barang'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
