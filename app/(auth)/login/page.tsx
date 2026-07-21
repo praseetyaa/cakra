@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
+import { Eye, EyeOff } from 'lucide-react'
+
 interface FormState {
   error: string | null
 }
@@ -23,6 +25,7 @@ function LoginForm() {
   const isAuthCodeError = searchParams.get('error') === 'auth-code-error'
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const [state, formAction, isPending] = useActionState(
     async (prevState: FormState, formData: FormData) => {
@@ -96,14 +99,29 @@ function LoginForm() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                required
-                className="focus:ring-emerald-800 dark:focus:ring-emerald-700"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  required
+                  className="focus:ring-emerald-800 dark:focus:ring-emerald-700 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
             <Button
               type="submit"
