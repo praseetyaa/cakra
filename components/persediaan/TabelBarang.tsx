@@ -390,7 +390,9 @@ export default function TabelBarang({
                 <Label htmlFor="add-kategori_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kategori</Label>
                 <Select value={addKategoriId} onValueChange={(val) => setAddKategoriId(val || '')}>
                   <SelectTrigger className="text-xs">
-                    <SelectValue placeholder="Pilih kategori barang" />
+                    <SelectValue placeholder="Pilih kategori barang">
+                      {categoryList.find((c) => c.id === addKategoriId)?.nama}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {categoryList.map((cat) => (
@@ -491,7 +493,9 @@ export default function TabelBarang({
                   <Label htmlFor="edit-kategori_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kategori</Label>
                   <Select value={editKategoriId} onValueChange={(val) => setEditKategoriId(val || '')}>
                     <SelectTrigger className="text-xs">
-                      <SelectValue placeholder="Pilih kategori barang" />
+                      <SelectValue placeholder="Pilih kategori barang">
+                        {categoryList.find((c) => c.id === editKategoriId)?.nama}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {categoryList.map((cat) => (
