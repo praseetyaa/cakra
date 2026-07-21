@@ -114,13 +114,6 @@ export async function resolvePermintaan(id: string, status: 'disetujui' | 'ditol
     return { error: 'Anda tidak memiliki wewenang untuk memproses permintaan ini.' }
   }
 
-  // Fetch pemohon_id & nomor BEFORE updating
-  const { data: permintaan } = await supabase
-    .from('permintaan')
-    .select('pemohon_id, nomor')
-    .eq('id', id)
-    .single()
-
   const { error } = await supabase
     .from('permintaan')
     .update({
@@ -136,63 +129,9 @@ export async function resolvePermintaan(id: string, status: 'disetujui' | 'ditol
     return { error: error.message || 'Gagal memproses permintaan. Silakan coba lagi.' }
   }
 
-  // 1. Notify pemohon about the decision
-  if (permintaan?.pemohon_id) {
-    await supabase.from('notifikasi').insert({
-      user_id: permintaan.pemohon_id,
-      judul: status === 'disetujui' ? '✅ Permintaan Disetujui' : '❌ Permintaan Ditolak',
-      pesan: status === 'disetujui'
-        ? `Permintaan ${permintaan.nomor || id} Anda telah disetujui dan sedang diproses oleh pengelola.`
-        : `Permintaan ${permintaan.nomor || id} Anda telah ditolak. Silakan hubungi pengelola untuk informasi lebih lanjut.`,
-      jenis: status,
-    })
-  }
-
-  // 2. If approved, check for any items that have fallen to/below stok_minimum
-  if (status === 'disetujui') {
-    // Get items in this permintaan
-    const { data: details } = await supabase
-      .from('permintaan_detail')
-      .select('barang_id')
-      .eq('permintaan_id', id)
-
-    if (details && details.length > 0) {
-      const barangIds = details.map((d) => d.barang_id)
-
-      // Fetch current stok for those items
-      const { data: barangList } = await supabase
-        .from('barang')
-        .select('id, nama, stok, stok_minimum')
-        .in('id', barangIds)
-
-      const menipis = (barangList || []).filter(
-        (b) => b.stok_minimum > 0 && b.stok <= b.stok_minimum
-      )
-
-      if (menipis.length > 0) {
-        // Get staff IDs (pengelola, pimpinan, admin)
-        const { data: staffProfiles } = await supabase
-          .from('profiles')
-          .select('id')
-          .in('role', ['pengelola', 'pimpinan', 'admin'])
-
-        if (staffProfiles && staffProfiles.length > 0) {
-          const stokNotifs = staffProfiles.flatMap((p) =>
-            menipis.map((b) => ({
-              user_id: p.id,
-              judul: '⚠️ Stok Barang Menipis',
-              pesan: `Stok ${b.nama} tersisa ${b.stok} (minimum: ${b.stok_minimum}). Segera lakukan pengadaan.`,
-              jenis: 'stok_menipis' as const,
-            }))
-          )
-          const { error: stokNotifError } = await supabase.from('notifikasi').insert(stokNotifs)
-          if (stokNotifError) {
-            console.error('Failed to insert stok_menipis notifications:', stokNotifError)
-          }
-        }
-      }
-    }
-  }
+  // NOTE: Notifikasi disetujui/ditolak dan stok_menipis sudah ditangani oleh
+  // database trigger `on_permintaan_approval` di Supabase (security definer).
+  // Tidak perlu insert manual di sini agar tidak duplikat.
 
   revalidatePath('/permintaan')
   revalidatePath(`/permintaan/${id}`)
