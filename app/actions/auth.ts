@@ -30,12 +30,9 @@ export async function signUpWithEmail(prevState: unknown, formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    return { error: error.message || 'Gagal melakukan pendaftaran.' }
   }
 
-  // If email confirmation is required, the user needs to check email
-  // If auto-confirm is enabled, they can log in immediately.
-  // We redirect to login page with a success query parameter
   redirect('/login?registered=true')
 }
 
@@ -54,7 +51,14 @@ export async function signInWithEmail(prevState: unknown, formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    console.error('Supabase Auth Signin Error:', error)
+    if (error.message && error.message.includes('Invalid login credentials')) {
+      return { error: 'Email atau password yang Anda masukkan salah.' }
+    }
+    if (error.message && error.message.includes('Email not confirmed')) {
+      return { error: 'Email Anda belum dikonfirmasi. Cek inbox email Anda.' }
+    }
+    return { error: error.message || 'Gagal masuk. Silakan periksa email dan password Anda.' }
   }
 
   redirect('/dashboard')
@@ -76,7 +80,7 @@ export async function signInWithGoogle() {
   })
 
   if (error) {
-    return { error: error.message }
+    return { error: error.message || 'Gagal login dengan Google.' }
   }
 
   if (data.url) {
