@@ -284,3 +284,57 @@ export async function importBarangBulk(items: ImportBarangItemInput[]) {
   revalidatePath('/riwayat')
   return { success: true, count: insertedBarang.length }
 }
+
+export async function createCategory(nama: string) {
+  if (!nama || !nama.trim()) {
+    return { error: 'Nama kategori tidak boleh kosong.' }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('kategori_barang')
+    .insert([{ nama: nama.trim() }])
+    .select()
+    .single()
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/persediaan')
+  return { success: true, category: data }
+}
+
+export async function updateCategory(id: string, nama: string) {
+  if (!nama || !nama.trim()) {
+    return { error: 'Nama kategori tidak boleh kosong.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('kategori_barang')
+    .update({ nama: nama.trim() })
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/persediaan')
+  return { success: true }
+}
+
+export async function deleteCategory(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('kategori_barang')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/persediaan')
+  return { success: true }
+}

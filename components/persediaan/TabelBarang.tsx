@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { createBarang, updateBarang } from '@/app/actions/persediaan'
+import { createBarang, updateBarang, getCategories } from '@/app/actions/persediaan'
 import { Input } from '@/components/ui/input'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -31,8 +31,9 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Search, Plus, Edit, Eye, ShieldAlert, Archive, FileSpreadsheet } from 'lucide-react'
+import { Search, Plus, Edit, Eye, ShieldAlert, FileSpreadsheet, Tag } from 'lucide-react'
 import ModalImportBarang from '@/components/persediaan/ModalImportBarang'
+import ModalKelolaKategori from '@/components/persediaan/ModalKelolaKategori'
 
 export interface Barang {
   id: string
@@ -70,18 +71,31 @@ export default function TabelBarang({
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
+  const [categoryList, setCategoryList] = useState<Category[]>(categories)
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  
   const [selectedBarang, setSelectedBarang] = useState<Barang | null>(null)
   
+  // Controlled category values for forms
+  const [addKategoriId, setAddKategoriId] = useState<string>('')
+  const [editKategoriId, setEditKategoriId] = useState<string>('')
+
   // Transition state
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
 
   const isEditable = userRole === 'pengelola' || userRole === 'admin'
+
+  // Refresh categories dynamically
+  const refreshCategories = async () => {
+    const updated = await getCategories()
+    setCategoryList(updated)
+  }
 
   // Filter items
   const filteredBarang = initialBarang.filter((item) => {
@@ -108,6 +122,7 @@ export default function TabelBarang({
         setFormError(result.error)
       } else {
         setIsAddOpen(false)
+        setAddKategoriId('')
       }
     })
   }
@@ -173,12 +188,12 @@ export default function TabelBarang({
                 <SelectValue placeholder="Kategori">
                   {categoryFilter === 'ALL'
                     ? 'Semua Kategori'
-                    : categories.find((c) => c.id === categoryFilter)?.nama || 'Kategori'}
+                    : categoryList.find((c) => c.id === categoryFilter)?.nama || 'Kategori'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL" className="text-xs">Semua Kategori</SelectItem>
-                {categories.map((cat) => (
+                {categoryList.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id} className="text-xs">
                     {cat.nama}
                   </SelectItem>
@@ -190,7 +205,18 @@ export default function TabelBarang({
 
         {/* Add & Import Barang Triggers (restricted) */}
         {isEditable && (
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap sm:flex-nowrap">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCategoryModalOpen(true)}
+              className="flex-1 sm:flex-initial border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900 font-medium flex items-center justify-center gap-1.5 text-xs"
+              title="Kelola Master Kategori Barang"
+            >
+              <Tag className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+              Kelola Kategori
+            </Button>
+
             <Button
               type="button"
               variant="outline"
@@ -205,6 +231,7 @@ export default function TabelBarang({
               type="button"
               onClick={() => {
                 setFormError(null)
+                setAddKategoriId('')
                 setIsAddOpen(true)
               }}
               className="flex-1 sm:flex-initial bg-emerald-800 hover:bg-emerald-700 text-white font-medium flex items-center justify-center gap-2 shadow-sm text-xs"
@@ -288,6 +315,7 @@ export default function TabelBarang({
                           onClick={() => {
                             setFormError(null)
                             setSelectedBarang(item)
+                            setEditKategoriId(item.kategori_id || '')
                             setIsEditOpen(true)
                           }}
                           className="h-8 px-2 text-slate-600 hover:text-emerald-800 dark:text-slate-400 dark:hover:text-emerald-400"
@@ -303,10 +331,11 @@ export default function TabelBarang({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <Archive className="h-8 w-8 text-slate-300" />
-                    <p>Tidak ada barang persediaan yang cocok.</p>
+                <TableCell colSpan={9} className="text-center py-12 text-slate-500">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <Tag className="h-8 w-8 text-slate-400" />
+                    <p className="font-semibold text-slate-700 dark:text-slate-300">Tidak ada barang persediaan</p>
+                    <p className="text-xs text-slate-400">Tidak ditemukan item barang yang sesuai dengan kata kunci pencarian atau filter Anda.</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -358,19 +387,20 @@ export default function TabelBarang({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="kategori_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kategori</Label>
-                <Select name="kategori_id">
+                <Label htmlFor="add-kategori_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kategori</Label>
+                <Select value={addKategoriId} onValueChange={(val) => setAddKategoriId(val || '')}>
                   <SelectTrigger className="text-xs">
                     <SelectValue placeholder="Pilih kategori barang" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
+                    {categoryList.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id} className="text-xs">
                         {cat.nama}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <input type="hidden" name="kategori_id" value={addKategoriId} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -459,18 +489,19 @@ export default function TabelBarang({
 
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-kategori_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kategori</Label>
-                  <Select name="kategori_id" defaultValue={selectedBarang.kategori_id || undefined}>
+                  <Select value={editKategoriId} onValueChange={(val) => setEditKategoriId(val || '')}>
                     <SelectTrigger className="text-xs">
                       <SelectValue placeholder="Pilih kategori barang" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
+                      {categoryList.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id} className="text-xs">
                           {cat.nama}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <input type="hidden" name="kategori_id" value={editKategoriId} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -521,10 +552,15 @@ export default function TabelBarang({
         </DialogContent>
       </Dialog>
 
-      {/* Modal Import Excel Barang */}
-      <ModalImportBarang
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
+      {/* Import Excel Modal */}
+      <ModalImportBarang isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
+
+      {/* Kelola Master Kategori Modal */}
+      <ModalKelolaKategori
+        open={isCategoryModalOpen}
+        onOpenChange={setIsCategoryModalOpen}
+        categories={categoryList}
+        onCategoriesChange={refreshCategories}
       />
     </div>
   )
