@@ -295,70 +295,75 @@ export default function TabelBarang({
 
       {/* Add Barang Dialog Modal */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Barang Persediaan</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[500px] flex flex-col p-0 overflow-hidden border-slate-200 dark:border-slate-800">
+          <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Plus className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+              Tambah Barang Persediaan
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Masukkan data detail barang baru yang ingin ditambahkan ke daftar persediaan.
             </DialogDescription>
           </DialogHeader>
 
-          {formError && (
-            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded flex items-start gap-2">
-              <ShieldAlert className="h-4 w-4 shrink-0 text-red-600" />
-              <span>{formError}</span>
-            </div>
-          )}
+          <form onSubmit={handleAddSubmit} className="flex flex-col">
+            <div className="p-6 space-y-4">
+              {formError && (
+                <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded-lg flex items-start gap-2">
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
-          <form onSubmit={handleAddSubmit} className="space-y-4 pt-2">
-            <div className="space-y-1">
-              <Label htmlFor="nama">Nama Barang</Label>
-              <Input id="nama" name="nama" placeholder="Kertas HVS A4 80gr" required />
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="kategori_id">Kategori</Label>
-              <Select name="kategori_id">
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori barang" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.nama}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="satuan">Satuan</Label>
-                <Input id="satuan" name="satuan" placeholder="Rim, Pak, Pcs" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="nama" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Barang</Label>
+                <Input id="nama" name="nama" placeholder="Kertas HVS A4 80gr" required className="text-xs" />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="lokasi">Lokasi Penyimpanan</Label>
-                <Input id="lokasi" name="lokasi" defaultValue="Gudang Persediaan" />
+
+              <div className="space-y-1.5">
+                <Label htmlFor="kategori_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kategori</Label>
+                <Select name="kategori_id">
+                  <SelectTrigger className="text-xs">
+                    <SelectValue placeholder="Pilih kategori barang" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                        {cat.nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="satuan" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Satuan</Label>
+                  <Input id="satuan" name="satuan" placeholder="Rim, Pak, Pcs" required className="text-xs" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lokasi" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Lokasi Penyimpanan</Label>
+                  <Input id="lokasi" name="lokasi" defaultValue="Gudang Persediaan" className="text-xs" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="stok" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Stok Awal</Label>
+                  <Input id="stok" name="stok" type="number" min="0" defaultValue="0" className="text-xs" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="stok_minimum" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Stok Minimum</Label>
+                  <Input id="stok_minimum" name="stok_minimum" type="number" min="0" defaultValue="5" className="text-xs" />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="stok">Stok Awal</Label>
-                <Input id="stok" name="stok" type="number" min="0" defaultValue="0" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="stok_minimum">Stok Minimum</Label>
-                <Input id="stok_minimum" name="stok_minimum" type="number" min="0" defaultValue="5" />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+            <DialogFooter className="mx-0 mb-0 p-4 px-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 gap-2 flex flex-row items-center justify-end">
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="text-xs">
                 Batal
               </Button>
-              <Button type="submit" disabled={isPending} className="bg-emerald-800 hover:bg-emerald-700 text-white font-semibold">
+              <Button type="submit" disabled={isPending} className="bg-emerald-800 hover:bg-emerald-700 text-white font-semibold text-xs min-w-[120px]">
                 {isPending ? 'Menyimpan...' : 'Simpan Barang'}
               </Button>
             </DialogFooter>
@@ -368,85 +373,94 @@ export default function TabelBarang({
 
       {/* Edit Barang Dialog Modal */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Ubah Data Barang</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[500px] flex flex-col p-0 overflow-hidden border-slate-200 dark:border-slate-800">
+          <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Edit className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+              Ubah Data Barang
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Perbarui informasi untuk barang yang sudah terdaftar. Perubahan stok tidak diubah dari form ini.
             </DialogDescription>
           </DialogHeader>
 
-          {formError && (
-            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded flex items-start gap-2">
-              <ShieldAlert className="h-4 w-4 shrink-0 text-red-600" />
-              <span>{formError}</span>
-            </div>
-          )}
-
           {selectedBarang && (
-            <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
-              <div className="space-y-1">
-                <Label htmlFor="edit-nama">Nama Barang</Label>
-                <Input
-                  id="edit-nama"
-                  name="nama"
-                  defaultValue={selectedBarang.nama}
-                  required
-                />
-              </div>
+            <form onSubmit={handleEditSubmit} className="flex flex-col">
+              <div className="p-6 space-y-4">
+                {formError && (
+                  <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded-lg flex items-start gap-2">
+                    <ShieldAlert className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                    <span>{formError}</span>
+                  </div>
+                )}
 
-              <div className="space-y-1">
-                <Label htmlFor="edit-kategori_id">Kategori</Label>
-                <Select name="kategori_id" defaultValue={selectedBarang.kategori_id || undefined}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kategori barang" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.nama}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-satuan">Satuan</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-nama" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Barang</Label>
                   <Input
-                    id="edit-satuan"
-                    name="satuan"
-                    defaultValue={selectedBarang.satuan}
+                    id="edit-nama"
+                    name="nama"
+                    defaultValue={selectedBarang.nama}
                     required
+                    className="text-xs"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-lokasi">Lokasi Penyimpanan</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-kategori_id" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Kategori</Label>
+                  <Select name="kategori_id" defaultValue={selectedBarang.kategori_id || undefined}>
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="Pilih kategori barang" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                          {cat.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-satuan" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Satuan</Label>
+                    <Input
+                      id="edit-satuan"
+                      name="satuan"
+                      defaultValue={selectedBarang.satuan}
+                      required
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-lokasi" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Lokasi Penyimpanan</Label>
+                    <Input
+                      id="edit-lokasi"
+                      name="lokasi"
+                      defaultValue={selectedBarang.lokasi}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-stok_minimum" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Stok Minimum</Label>
                   <Input
-                    id="edit-lokasi"
-                    name="lokasi"
-                    defaultValue={selectedBarang.lokasi}
+                    id="edit-stok_minimum"
+                    name="stok_minimum"
+                    type="number"
+                    min="0"
+                    defaultValue={selectedBarang.stok_minimum}
+                    className="text-xs"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="edit-stok_minimum">Stok Minimum</Label>
-                <Input
-                  id="edit-stok_minimum"
-                  name="stok_minimum"
-                  type="number"
-                  min="0"
-                  defaultValue={selectedBarang.stok_minimum}
-                />
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+              <DialogFooter className="mx-0 mb-0 p-4 px-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 gap-2 flex flex-row items-center justify-end">
+                <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="text-xs">
                   Batal
                 </Button>
-                <Button type="submit" disabled={isPending} className="bg-emerald-800 hover:bg-emerald-700 text-white font-semibold">
+                <Button type="submit" disabled={isPending} className="bg-emerald-800 hover:bg-emerald-700 text-white font-semibold text-xs min-w-[120px]">
                   {isPending ? 'Menyimpan...' : 'Perbarui Barang'}
                 </Button>
               </DialogFooter>

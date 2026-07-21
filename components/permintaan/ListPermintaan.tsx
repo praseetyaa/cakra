@@ -266,142 +266,150 @@ export default function ListPermintaan({
 
       {/* Ajukan Permintaan Dialog Modal */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Ajukan Permintaan Barang (ATK)</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col p-0 overflow-hidden border-slate-200 dark:border-slate-800">
+          <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Plus className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+              Ajukan Permintaan Barang (ATK)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Buat permintaan barang logistik. Anda dapat menambahkan beberapa item barang sekaligus.
             </DialogDescription>
           </DialogHeader>
 
-          {formError && (
-            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded flex items-start gap-2">
-              <ShieldAlert className="h-4 w-4 shrink-0 text-red-600" />
-              <span>{formError}</span>
-            </div>
-          )}
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {formError && (
+                <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded-lg flex items-start gap-2">
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="unit_kerja">Unit Kerja</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="unit_kerja" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Unit Kerja</Label>
+                  <Input
+                    id="unit_kerja"
+                    name="unit_kerja"
+                    defaultValue={userProfile?.unit_kerja || ''}
+                    placeholder="Sub Bagian Umum & Keuangan"
+                    required
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="keperluan" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Keperluan</Label>
+                  <Input
+                    id="keperluan"
+                    name="keperluan"
+                    placeholder="Stok ATK Triwulan III"
+                    required
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="catatan" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Catatan Tambahan (Opsional)</Label>
                 <Input
-                  id="unit_kerja"
-                  name="unit_kerja"
-                  defaultValue={userProfile?.unit_kerja || ''}
-                  placeholder="Sub Bagian Umum & Keuangan"
-                  required
+                  id="catatan"
+                  name="catatan"
+                  placeholder="Mohon diproses sebelum tanggal 20"
+                  className="text-xs"
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="keperluan">Keperluan</Label>
-                <Input
-                  id="keperluan"
-                  name="keperluan"
-                  placeholder="Stok ATK Triwulan III"
-                  required
-                />
-              </div>
-            </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="catatan">Catatan Tambahan (Opsional)</Label>
-              <Input
-                id="catatan"
-                name="catatan"
-                placeholder="Mohon diproses sebelum tanggal 20"
-              />
-            </div>
+              {/* Dynamic items selection builder */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Daftar Barang Yang Diminta
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={handleAddItemRow}
+                    className="text-emerald-800 border-emerald-300 hover:bg-emerald-50 text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1 text-emerald-700" />
+                    Tambah Baris
+                  </Button>
+                </div>
 
-            {/* Dynamic items selection builder */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold uppercase text-slate-500">
-                  Daftar Barang Yang Diminta
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={handleAddItemRow}
-                  className="text-emerald-800 hover:text-white hover:bg-emerald-800"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Tambah Baris
-                </Button>
-              </div>
+                <div className="space-y-3">
+                  {formItems.map((item, index) => {
+                    const selectedBarangInfo = barangList.find((b) => b.id === item.barang_id)
+                    const isExceeding = selectedBarangInfo && item.jumlah > selectedBarangInfo.stok
 
-              <div className="space-y-3">
-                {formItems.map((item, index) => {
-                  const selectedBarangInfo = barangList.find((b) => b.id === item.barang_id)
-                  const isExceeding = selectedBarangInfo && item.jumlah > selectedBarangInfo.stok
+                    return (
+                      <div key={index} className="space-y-1.5 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                        <div className="flex gap-3 items-end">
+                          {/* Select item */}
+                          <div className="flex-1">
+                            <Label className="text-[10px] font-semibold text-slate-400">Pilih Barang</Label>
+                            <Select
+                              value={item.barang_id}
+                              onValueChange={(val) => handleItemSelect(index, val || '')}
+                            >
+                              <SelectTrigger className="h-9 text-xs">
+                                <SelectValue placeholder="Pilih barang ATK" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {barangList.map((barang) => (
+                                  <SelectItem key={barang.id} value={barang.id} className="text-xs">
+                                    {barang.nama} (Stok: {barang.stok} {barang.satuan})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                  return (
-                    <div key={index} className="space-y-1.5 p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
-                      <div className="flex gap-3 items-end">
-                        {/* Select item */}
-                        <div className="flex-1">
-                          <Label className="text-[10px] text-slate-400">Pilih Barang</Label>
-                          <Select
-                            value={item.barang_id}
-                            onValueChange={(val) => handleItemSelect(index, val || '')}
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Pilih barang ATK" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {barangList.map((barang) => (
-                                <SelectItem key={barang.id} value={barang.id}>
-                                  {barang.nama} (Stok: {barang.stok} {barang.satuan})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {/* Input quantity */}
+                          <div className="w-24">
+                            <Label className="text-[10px] font-semibold text-slate-400">Jumlah</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.jumlah}
+                              onChange={(e) => handleQtyChange(index, parseInt(e.target.value || '1', 10))}
+                              className="h-9 text-xs"
+                            />
+                          </div>
+
+                          {/* Remove row */}
+                          {formItems.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => handleRemoveItemRow(index)}
+                              className="h-9 w-9 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
 
-                        {/* Input quantity */}
-                        <div className="w-24">
-                          <Label className="text-[10px] text-slate-400">Jumlah</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.jumlah}
-                            onChange={(e) => handleQtyChange(index, parseInt(e.target.value || '1', 10))}
-                            className="h-9"
-                          />
-                        </div>
-
-                        {/* Remove row */}
-                        {formItems.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => handleRemoveItemRow(index)}
-                            className="h-9 w-9 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg shrink-0"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </Button>
+                        {/* Overstock helper note */}
+                        {isExceeding && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded w-fit">
+                            <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                            <span>Jumlah diminta melebihi stok yang tersedia saat ini ({selectedBarangInfo.stok} {selectedBarangInfo.satuan}).</span>
+                          </div>
                         )}
                       </div>
-
-                      {/* Overstock helper note */}
-                      {isExceeding && (
-                        <div className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded w-fit">
-                          <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
-                          <span>Jumlah diminta melebihi stok yang tersedia saat ini ({selectedBarangInfo.stok} {selectedBarangInfo.satuan}).</span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800/60">
-              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+            <DialogFooter className="mx-0 mb-0 p-4 px-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 gap-2 flex flex-row items-center justify-end">
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="text-xs">
                 Batal
               </Button>
-              <Button type="submit" disabled={isPending} className="bg-emerald-800 hover:bg-emerald-700 text-white font-semibold">
+              <Button type="submit" disabled={isPending} className="bg-emerald-800 hover:bg-emerald-700 text-white font-semibold text-xs min-w-[120px]">
                 {isPending ? 'Mengirim...' : 'Kirim Permintaan'}
               </Button>
             </DialogFooter>
