@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useEffect, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createBarang, updateBarang, deleteBarang, getCategories } from '@/app/actions/persediaan'
 import { Input } from '@/components/ui/input'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -68,10 +69,16 @@ export default function TabelBarang({
   categories,
   userRole
 }: TabelBarangProps) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [categoryList, setCategoryList] = useState<Category[]>(categories)
+  const [itemList, setItemList] = useState<Barang[]>(initialBarang)
+
+  useEffect(() => {
+    setItemList(initialBarang)
+  }, [initialBarang])
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -100,7 +107,7 @@ export default function TabelBarang({
   }
 
   // Filter items
-  const filteredBarang = initialBarang.filter((item) => {
+  const filteredBarang = itemList.filter((item) => {
     const query = search.toLowerCase().trim()
     const matchesSearch =
       item.nama.toLowerCase().includes(query) ||
@@ -163,8 +170,10 @@ export default function TabelBarang({
       if (res.error) {
         setFormError(res.error)
       } else {
+        setItemList((prev) => prev.filter((b) => b.id !== barangToDelete.id))
         setIsDeleteOpen(false)
         setBarangToDelete(null)
+        router.refresh()
       }
     })
   }
