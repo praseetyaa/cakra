@@ -107,7 +107,7 @@ export default function TombolApproval({ requestId }: TombolApprovalProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-4">
+          <DialogFooter className="gap-3 sm:gap-3 sm:space-x-0 pt-4">
             <Button
               type="button"
               variant="outline"
