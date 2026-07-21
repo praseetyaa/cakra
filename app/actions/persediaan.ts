@@ -141,6 +141,30 @@ export async function updateBarang(id: string, prevState: unknown, formData: For
     return { error: error.message }
   }
 
+  // Check if the updated stok is now at or below stok_minimum → notify staff
+  const { data: updatedBarang } = await supabase
+    .from('barang')
+    .select('nama, stok, stok_minimum')
+    .eq('id', id)
+    .single()
+
+  if (updatedBarang && updatedBarang.stok_minimum > 0 && updatedBarang.stok <= updatedBarang.stok_minimum) {
+    const { data: staffProfiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .in('role', ['pengelola', 'pimpinan', 'admin'])
+
+    if (staffProfiles && staffProfiles.length > 0) {
+      const notifs = staffProfiles.map((p) => ({
+        user_id: p.id,
+        judul: '⚠️ Stok Barang Menipis',
+        pesan: `Stok ${updatedBarang.nama} tersisa ${updatedBarang.stok} (minimum: ${updatedBarang.stok_minimum}). Segera lakukan pengadaan.`,
+        jenis: 'stok_menipis' as const,
+      }))
+      await supabase.from('notifikasi').insert(notifs)
+    }
+  }
+
   revalidatePath('/persediaan')
   revalidatePath(`/persediaan/${id}`)
   return { success: true }
