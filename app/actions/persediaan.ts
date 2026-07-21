@@ -155,12 +155,21 @@ export async function deleteBarang(id: string) {
   // 2. Delete associated request item details if any
   await supabase.from('detail_permintaan').delete().eq('barang_id', id)
 
-  // 3. Delete item from barang table
-  const { error } = await supabase.from('barang').delete().eq('id', id)
+  // 3. Delete item from barang table - use select() to detect if RLS silently blocked it
+  const { data: deleted, error } = await supabase
+    .from('barang')
+    .delete()
+    .eq('id', id)
+    .select('id')
 
   if (error) {
     console.error('Failed to delete barang:', error)
     return { error: error.message }
+  }
+
+  if (!deleted || deleted.length === 0) {
+    console.error('Delete was silently blocked (RLS or item not found). id:', id)
+    return { error: 'Penghapusan ditolak oleh kebijakan database (RLS). Pastikan kolom diperbarui di Supabase SQL Editor.' }
   }
 
   revalidatePath('/persediaan')
