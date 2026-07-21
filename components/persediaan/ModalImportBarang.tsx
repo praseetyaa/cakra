@@ -130,6 +130,23 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
     URL.revokeObjectURL(url)
   }
 
+  // Helper to extract string from cell value safely
+  const getStringValue = (val: unknown): string => {
+    if (val === null || val === undefined) return ''
+    if (typeof val === 'object') {
+      if ('result' in val && (val as { result: unknown }).result !== undefined) {
+        return String((val as { result: unknown }).result).trim()
+      }
+      if ('text' in val && (val as { text: unknown }).text !== undefined) {
+        return String((val as { text: unknown }).text).trim()
+      }
+      if ('richText' in val && Array.isArray((val as { richText: Array<{ text: string }> }).richText)) {
+        return (val as { richText: Array<{ text: string }> }).richText.map(t => t.text).join('').trim()
+      }
+    }
+    return String(val).trim()
+  }
+
   // 2. Process File & Parse Excel Data
   const processExcelFile = async (selectedFile: File) => {
     setFile(selectedFile)
@@ -143,7 +160,8 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
       const workbook = new ExcelJS.Workbook()
       await workbook.xlsx.load(buffer)
 
-      const worksheet = workbook.getWorksheet('Data Barang') || workbook.worksheets[0]
+      // Search for 'Daftar Barang' worksheet or first worksheet
+      const worksheet = workbook.getWorksheet('Daftar Barang') || workbook.worksheets[0]
 
       if (!worksheet) {
         setParseError('Lembar kerja (worksheet) Excel tidak ditemukan.')
@@ -151,47 +169,80 @@ export default function ModalImportBarang({ isOpen, onClose }: ModalImportBarang
         return
       }
 
-      const items: ImportBarangItemInput[] = []
+      // Smart Header Row & Column Mapping Detection
+      let headerRowIndex = -1
+      const colMap: { nama: number; kategori: number; satuan: number; stok: number; stok_min: number; lokasi: number } = {
+        nama: -1,
+        kategori: -1,
+        satuan: -1,
+        stok: -1,
+        stok_min: -1,
+        lokasi: -1
+      }
 
       worksheet.eachRow((row, rowNumber) => {
-        // Skip header row
-        if (rowNumber === 1) return
-
-        const rowValues = row.values as Array<unknown>
-        if (!rowValues || rowValues.length < 2) return
-
-        const getCellValue = (colIdx: number): string => {
-          const val = rowValues[colIdx]
-          if (val === null || val === undefined) return ''
-          if (typeof val === 'object' && 'result' in val) return String((val as { result: unknown }).result || '')
-          if (typeof val === 'object' && 'text' in val) return String((val as { text: unknown }).text || '')
-          return String(val).trim()
-        }
-
-        const nama = getCellValue(1)
-        const kategori_nama = getCellValue(2)
-        const satuan = getCellValue(3) || 'Pcs'
-        const stokStr = getCellValue(4)
-        const stokMinStr = getCellValue(5)
-        const lokasi = getCellValue(6) || 'Gudang Persediaan'
-
-        if (nama) {
-          const stok = parseInt(stokStr, 10)
-          const stok_minimum = parseInt(stokMinStr, 10)
-
-          items.push({
-            nama,
-            kategori_nama: kategori_nama || undefined,
-            satuan: satuan || 'Pcs',
-            stok: isNaN(stok) ? 0 : Math.max(0, stok),
-            stok_minimum: isNaN(stok_minimum) ? 0 : Math.max(0, stok_minimum),
-            lokasi: lokasi || 'Gudang Persediaan',
+        if (headerRowIndex !== -1) return
+        const values = (row.values as Array<unknown> || []).map(v => getStringValue(v).toLowerCase())
+        
+        // Header detection: looks for 'deskripsi' or 'nama barang' or 'nama'
+        const deskripsiIdx = values.findIndex(v => typeof v === 'string' && (v.includes('deskripsi') || v.includes('nama barang') || v === 'nama'))
+        if (deskripsiIdx !== -1) {
+          headerRowIndex = rowNumber
+          values.forEach((v, idx) => {
+            if (typeof v !== 'string' || !v) return
+            if (v.includes('deskripsi') || v.includes('nama barang') || v === 'nama') colMap.nama = idx
+            else if (v.includes('satuan')) colMap.satuan = idx
+            else if (v.includes('stok') || v.includes('jumlah')) colMap.stok = idx
+            else if (v.includes('kategori')) colMap.kategori = idx
+            else if (v.includes('minimum') || v.includes('min')) colMap.stok_min = idx
+            else if (v.includes('lokasi') || v.includes('gudang')) colMap.lokasi = idx
           })
         }
       })
 
+      // Fallback if header wasn't dynamically detected (assume row 1 default layout)
+      if (headerRowIndex === -1) {
+        headerRowIndex = 1
+        colMap.nama = 1
+        colMap.kategori = 2
+        colMap.satuan = 3
+        colMap.stok = 4
+        colMap.stok_min = 5
+        colMap.lokasi = 6
+      }
+
+      const items: ImportBarangItemInput[] = []
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber <= headerRowIndex) return
+
+        const rowValues = row.values as Array<unknown>
+        if (!rowValues || rowValues.length === 0) return
+
+        const nama = colMap.nama !== -1 ? getStringValue(rowValues[colMap.nama]) : ''
+        if (!nama || nama.toLowerCase().includes('jumlah seluruh') || nama.toLowerCase().includes('total')) return
+
+        const kategori_nama = colMap.kategori !== -1 ? getStringValue(rowValues[colMap.kategori]) : undefined
+        const satuan = colMap.satuan !== -1 ? getStringValue(rowValues[colMap.satuan]) || 'Pcs' : 'Pcs'
+        const stokStr = colMap.stok !== -1 ? getStringValue(rowValues[colMap.stok]) : '0'
+        const stokMinStr = colMap.stok_min !== -1 ? getStringValue(rowValues[colMap.stok_min]) : '0'
+        const lokasi = colMap.lokasi !== -1 ? getStringValue(rowValues[colMap.lokasi]) || 'Gudang Persediaan' : 'Gudang Persediaan'
+
+        const stok = parseInt(stokStr, 10)
+        const stok_minimum = parseInt(stokMinStr, 10)
+
+        items.push({
+          nama,
+          kategori_nama: kategori_nama || undefined,
+          satuan: satuan || 'Pcs',
+          stok: isNaN(stok) ? 0 : Math.max(0, stok),
+          stok_minimum: isNaN(stok_minimum) ? 0 : Math.max(0, stok_minimum),
+          lokasi: lokasi || 'Gudang Persediaan',
+        })
+      })
+
       if (items.length === 0) {
-        setParseError('Tidak ada data barang yang valid ditemukan pada file Excel tersebut. Harap gunakan template yang disediakan.')
+        setParseError('Tidak ada data barang yang valid ditemukan pada file Excel tersebut.')
       } else {
         setParsedItems(items)
       }
