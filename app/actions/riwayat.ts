@@ -1,32 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-
-export interface RiwayatBarangKeluarItem {
-  id: string
-  created_at: string
-  jumlah: number
-  keterangan: string | null
-  barang: {
-    nama: string
-    satuan: string
-  }
-  permintaan: {
-    id: string
-    nomor: string
-    unit_kerja: string
-  } | null
-  pemohon: {
-    nama_lengkap: string
-  } | null
-}
-
-export interface PaginatedRiwayatResponse {
-  data: RiwayatBarangKeluarItem[]
-  totalPages: number
-  totalCount: number
-  currentPage: number
-}
+import type { RiwayatBarangKeluarItem, PaginatedRiwayatResponse } from '@/lib/types'
 
 export async function getRiwayatBarangKeluar(
   page: number = 1,

@@ -14,7 +14,7 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Search, Calendar, User, Building, Package, Info, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
-import { RiwayatBarangKeluarItem } from '@/app/actions/riwayat'
+import type { RiwayatBarangKeluarItem } from '@/lib/types'
 
 interface TabelRiwayatProps {
   initialLogs: RiwayatBarangKeluarItem[]

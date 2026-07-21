@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useTransition } from 'react'
-import { updateUserRole, UserProfileItem, UserRole } from '@/app/actions/pengguna'
+import { updateUserRole } from '@/app/actions/pengguna'
+import type { UserProfileItem, UserRole } from '@/lib/types'
 import { Input } from '@/components/ui/input'
 import {
   Table,

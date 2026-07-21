@@ -2,17 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { UserRole } from '@/lib/types'
-
-export type { UserRole }
-
-export interface UserProfileItem {
-  id: string
-  nama_lengkap: string
-  unit_kerja: string | null
-  role: UserRole
-  created_at: string
-}
+import type { UserRole, UserProfileItem } from '@/lib/types'
 
 export async function listUsers() {
   const supabase = await createClient()
