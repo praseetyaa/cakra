@@ -74,9 +74,9 @@ function LoginForm() {
             </div>
           )}
 
-          {(state.error || errorMsg || (isAuthCodeError && !state.error && !errorMsg)) && (
-            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded">
-              {typeof state.error === 'string'
+          {(Boolean(state.error) || Boolean(errorMsg) || isAuthCodeError) && (
+            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300 rounded font-medium">
+              {typeof state.error === 'string' && state.error !== '{}' && state.error.trim().length > 0
                 ? state.error
                 : errorMsg || 'Email atau password yang Anda masukkan salah. Silakan coba lagi.'}
             </div>
