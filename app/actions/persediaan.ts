@@ -326,6 +326,14 @@ export async function updateCategory(id: string, nama: string) {
 
 export async function deleteCategory(id: string) {
   const supabase = await createClient()
+
+  // 1. Unassign items using this category safely (set kategori_id to null)
+  await supabase
+    .from('barang')
+    .update({ kategori_id: null })
+    .eq('kategori_id', id)
+
+  // 2. Delete the category
   const { error } = await supabase
     .from('kategori_barang')
     .delete()
