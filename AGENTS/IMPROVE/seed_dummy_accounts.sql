@@ -19,17 +19,19 @@ declare
   new_user_id uuid := uuid_generate_v4();
 begin
   insert into auth.users (
-    id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmed_at, is_sso_user,
-    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, last_sign_in_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, email_change, email_change_token_new, recovery_token
   ) values (
-    new_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+    '00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated',
     'pengelola@cakra.pa-kajen.go.id',
-    crypt('Password123!', gen_salt('bf')),
-    now(), now(), false,
+    crypt('Password123!', gen_salt('bf', 10)),
+    now(), now(),
     '{"provider":"email","providers":["email"]}',
     '{"nama_lengkap":"Ahmad Pengelola, S.Kom."}',
-    now(), now()
+    now(), now(),
+    '', '', '', ''
   );
 
   update public.profiles
@@ -45,17 +47,19 @@ declare
   new_user_id uuid := uuid_generate_v4();
 begin
   insert into auth.users (
-    id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmed_at, is_sso_user,
-    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, last_sign_in_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, email_change, email_change_token_new, recovery_token
   ) values (
-    new_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+    '00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated',
     'pimpinan@cakra.pa-kajen.go.id',
-    crypt('Password123!', gen_salt('bf')),
-    now(), now(), false,
+    crypt('Password123!', gen_salt('bf', 10)),
+    now(), now(),
     '{"provider":"email","providers":["email"]}',
     '{"nama_lengkap":"Drs. H. Pimpinan Supriyadi, M.H."}',
-    now(), now()
+    now(), now(),
+    '', '', '', ''
   );
 
   update public.profiles
@@ -71,17 +75,19 @@ declare
   new_user_id uuid := uuid_generate_v4();
 begin
   insert into auth.users (
-    id, instance_id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmed_at, is_sso_user,
-    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, last_sign_in_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, email_change, email_change_token_new, recovery_token
   ) values (
-    new_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+    '00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated',
     'admin@cakra.pa-kajen.go.id',
-    crypt('Password123!', gen_salt('bf')),
-    now(), now(), false,
+    crypt('Password123!', gen_salt('bf', 10)),
+    now(), now(),
     '{"provider":"email","providers":["email"]}',
     '{"nama_lengkap":"Administrator Sistem CAKRA"}',
-    now(), now()
+    now(), now(),
+    '', '', '', ''
   );
 
   update public.profiles
