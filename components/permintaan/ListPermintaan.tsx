@@ -353,8 +353,17 @@ export default function ListPermintaan({
                               value={item.barang_id}
                               onValueChange={(val) => handleItemSelect(index, val || '')}
                             >
-                              <SelectTrigger className="h-9 text-xs">
-                                <SelectValue placeholder="Pilih barang ATK" />
+                              <SelectTrigger className="h-9 text-xs overflow-hidden">
+                                {item.barang_id ? (
+                                  <span className="truncate text-xs block">
+                                    {(() => {
+                                      const b = barangList.find((x) => x.id === item.barang_id)
+                                      return b ? `${b.nama} (Stok: ${b.stok} ${b.satuan})` : 'Pilih barang ATK'
+                                    })()}
+                                  </span>
+                                ) : (
+                                  <SelectValue placeholder="Pilih barang ATK" />
+                                )}
                               </SelectTrigger>
                               <SelectContent>
                                 {barangList.map((barang) => (
