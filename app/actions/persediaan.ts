@@ -26,7 +26,7 @@ export async function createBarang(prevState: unknown, formData: FormData) {
   const supabase = await createClient()
 
   // 1. Insert the new item
-  const fullPayload = {
+  const fullPayload: Record<string, unknown> = {
     kd_brng,
     kd_barang,
     kode_barang_lengkap,
@@ -146,6 +146,23 @@ export async function updateBarang(id: string, prevState: unknown, formData: For
   return { success: true }
 }
 
+export async function deleteBarang(id: string) {
+  const supabase = await createClient()
+
+  // 1. Delete associated stock logs
+  await supabase.from('riwayat_stok').delete().eq('barang_id', id)
+
+  // 2. Delete item from barang table
+  const { error } = await supabase.from('barang').delete().eq('id', id)
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/persediaan')
+  revalidatePath('/riwayat')
+  return { success: true }
+}
+
 export async function getCategories() {
   const supabase = await createClient()
 
@@ -201,7 +218,7 @@ export async function importBarangBulk(items: ImportBarangItemInput[]) {
 
   const supabase = await createClient()
 
-  // 1. Security Check: verify user is authenticated and is pengelola or admin
+  // 1. Security Check
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
     return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
@@ -223,66 +240,129 @@ export async function importBarangBulk(items: ImportBarangItemInput[]) {
     categories.map((c: { id: string; nama: string }) => [c.nama.toLowerCase().trim(), c.id])
   )
 
-  // 3. Format items for insertion
-  const barangInserts = items.map((item) => {
+  // 3. Fetch existing barang items in DB for de-duplication (Upsert)
+  const { data: existingBarangList } = await supabase
+    .from('barang')
+    .select('*')
+
+  const existingByKode = new Map<string, Record<string, unknown>>()
+  const existingByNama = new Map<string, Record<string, unknown>>()
+
+  if (existingBarangList) {
+    existingBarangList.forEach((b: Record<string, unknown>) => {
+      if (b.kode_barang_lengkap) {
+        existingByKode.set(String(b.kode_barang_lengkap).toLowerCase().trim(), b)
+      }
+      if (b.nama) {
+        existingByNama.set(String(b.nama).toLowerCase().trim(), b)
+      }
+    })
+  }
+
+  // 4. Process each item: UPDATE if existing, INSERT if new
+  let processedCount = 0
+  const historyInserts: Record<string, unknown>[] = []
+
+  for (const item of items) {
+    const namaTrim = item.nama.trim()
+    const kodeTrim = item.kode_barang_lengkap ? item.kode_barang_lengkap.trim() : null
     const matchedCategoryId = item.kategori_nama
       ? categoryMap.get(item.kategori_nama.toLowerCase().trim()) || null
       : null
 
-    return {
-      kd_brng: item.kd_brng ? item.kd_brng.trim() : null,
-      kd_barang: item.kd_barang ? item.kd_barang.trim() : null,
-      kode_barang_lengkap: item.kode_barang_lengkap ? item.kode_barang_lengkap.trim() : null,
-      nama: item.nama.trim(),
-      kategori_id: matchedCategoryId,
-      satuan: item.satuan.trim() || 'Pcs',
-      stok: Math.max(0, item.stok || 0),
-      stok_minimum: Math.max(0, item.stok_minimum || 0),
-      lokasi: (item.lokasi && item.lokasi.trim()) ? item.lokasi.trim() : 'Gudang Persediaan',
+    // Check if item already exists by kode_barang_lengkap or by nama
+    const existing = (kodeTrim && existingByKode.get(kodeTrim.toLowerCase())) || existingByNama.get(namaTrim.toLowerCase())
+
+    if (existing) {
+      // UPDATE existing item
+      const updateData: Record<string, unknown> = {
+        nama: namaTrim,
+        satuan: item.satuan.trim() || String(existing.satuan || 'Pcs'),
+        stok_minimum: Math.max(0, item.stok_minimum ?? Number(existing.stok_minimum || 0)),
+        lokasi: (item.lokasi && item.lokasi.trim()) ? item.lokasi.trim() : String(existing.lokasi || 'Gudang Persediaan'),
+        updated_at: new Date().toISOString(),
+      }
+
+      if (matchedCategoryId) updateData.kategori_id = matchedCategoryId
+      if (item.kd_brng) updateData.kd_brng = item.kd_brng.trim()
+      if (item.kd_barang) updateData.kd_barang = item.kd_barang.trim()
+      if (kodeTrim) updateData.kode_barang_lengkap = kodeTrim
+
+      // If stock in Excel is > 0 and differs from DB, update stock and write audit log
+      const existingStok = Number(existing.stok || 0)
+      if (item.stok > 0 && item.stok !== existingStok) {
+        updateData.stok = Math.max(0, item.stok)
+
+        historyInserts.push({
+          barang_id: existing.id,
+          jumlah: item.stok,
+          jenis: 'penyesuaian',
+          keterangan: 'Pembaruan stok dari Import Excel',
+        })
+      }
+
+      let { error: updateError } = await supabase
+        .from('barang')
+        .update(updateData)
+        .eq('id', existing.id)
+
+      if (updateError && (updateError.message.includes('schema cache') || updateError.message.includes('column'))) {
+        delete updateData.kd_brng
+        delete updateData.kd_barang
+        delete updateData.kode_barang_lengkap
+        await supabase.from('barang').update(updateData).eq('id', existing.id)
+      }
+
+      processedCount++
+    } else {
+      // INSERT new item
+      const newPayload: Record<string, unknown> = {
+        kd_brng: item.kd_brng ? item.kd_brng.trim() : null,
+        kd_barang: item.kd_barang ? item.kd_barang.trim() : null,
+        kode_barang_lengkap: kodeTrim,
+        nama: namaTrim,
+        kategori_id: matchedCategoryId,
+        satuan: item.satuan.trim() || 'Pcs',
+        stok: Math.max(0, item.stok || 0),
+        stok_minimum: Math.max(0, item.stok_minimum || 0),
+        lokasi: (item.lokasi && item.lokasi.trim()) ? item.lokasi.trim() : 'Gudang Persediaan',
+      }
+
+      let { data: newBarang, error: insertError } = await supabase
+        .from('barang')
+        .insert([newPayload])
+        .select()
+        .single()
+
+      if (insertError && (insertError.message.includes('schema cache') || insertError.message.includes('column'))) {
+        delete newPayload.kd_brng
+        delete newPayload.kd_barang
+        delete newPayload.kode_barang_lengkap
+        const fallbackRes = await supabase.from('barang').insert([newPayload]).select().single()
+        newBarang = fallbackRes.data
+      }
+
+      if (newBarang && item.stok > 0) {
+        historyInserts.push({
+          barang_id: newBarang.id,
+          jumlah: item.stok,
+          jenis: 'masuk',
+          keterangan: 'Stok awal import Excel',
+        })
+      }
+
+      processedCount++
     }
-  })
-
-  // 4. Batch insert into barang table
-  let { data: insertedBarang, error: insertError } = await supabase
-    .from('barang')
-    .insert(barangInserts)
-    .select()
-
-  // Fallback if DB migration hasn't been executed on Supabase yet (schema cache error)
-  if (insertError && (insertError.message.includes('schema cache') || insertError.message.includes('column'))) {
-    const fallbackInserts = barangInserts.map(({ kd_brng, kd_barang, kode_barang_lengkap, ...rest }) => rest)
-    const fallbackRes = await supabase.from('barang').insert(fallbackInserts).select()
-    insertedBarang = fallbackRes.data
-    insertError = fallbackRes.error
   }
 
-  if (insertError || !insertedBarang) {
-    return { error: insertError?.message || 'Gagal menyimpan batch barang persediaan.' }
-  }
-
-  // 5. Batch insert initial stock logs for items with stok > 0
-  const historyInserts = insertedBarang
-    .filter((b) => b.stok > 0)
-    .map((b) => ({
-      barang_id: b.id,
-      jumlah: b.stok,
-      jenis: 'masuk',
-      keterangan: 'Stok awal import Excel',
-    }))
-
+  // 5. Batch insert history logs if any
   if (historyInserts.length > 0) {
-    const { error: historyError } = await supabase
-      .from('riwayat_stok')
-      .insert(historyInserts)
-
-    if (historyError) {
-      console.error('Failed to log stock history for imported items:', historyError)
-    }
+    await supabase.from('riwayat_stok').insert(historyInserts)
   }
 
   revalidatePath('/persediaan')
   revalidatePath('/riwayat')
-  return { success: true, count: insertedBarang.length }
+  return { success: true, count: processedCount }
 }
 
 export async function createCategory(nama: string) {

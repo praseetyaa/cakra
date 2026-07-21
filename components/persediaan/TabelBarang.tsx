@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { createBarang, updateBarang, getCategories } from '@/app/actions/persediaan'
+import { createBarang, updateBarang, deleteBarang, getCategories } from '@/app/actions/persediaan'
 import { Input } from '@/components/ui/input'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Search, Plus, Edit, Eye, ShieldAlert, FileSpreadsheet, Tag } from 'lucide-react'
+import { Search, Plus, Edit, Eye, ShieldAlert, FileSpreadsheet, Tag, Trash2 } from 'lucide-react'
 import ModalImportBarang from '@/components/persediaan/ModalImportBarang'
 import ModalKelolaKategori from '@/components/persediaan/ModalKelolaKategori'
 
@@ -141,6 +141,17 @@ export default function TabelBarang({
       } else {
         setIsEditOpen(false)
         setSelectedBarang(null)
+      }
+    })
+  }
+
+  // Delete Handler for Item
+  const handleDeleteBarang = async (id: string, nama: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus barang "${nama}"?`)) return
+    startTransition(async () => {
+      const res = await deleteBarang(id)
+      if (res.error) {
+        alert(`Gagal menghapus barang: ${res.error}`)
       }
     })
   }
@@ -309,21 +320,34 @@ export default function TabelBarang({
                       </Link>
 
                       {isEditable && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setFormError(null)
-                            setSelectedBarang(item)
-                            setEditKategoriId(item.kategori_id || '')
-                            setIsEditOpen(true)
-                          }}
-                          className="h-8 px-2 text-slate-600 hover:text-emerald-800 dark:text-slate-400 dark:hover:text-emerald-400"
-                          title="Ubah Barang"
-                        >
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Ubah</span>
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setFormError(null)
+                              setSelectedBarang(item)
+                              setEditKategoriId(item.kategori_id || '')
+                              setIsEditOpen(true)
+                            }}
+                            className="h-8 px-2 text-slate-600 hover:text-emerald-800 dark:text-slate-400 dark:hover:text-emerald-400"
+                            title="Ubah Barang"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Ubah</span>
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteBarang(item.id, item.nama)}
+                            className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/40 border-red-200 dark:border-red-900/50"
+                            title="Hapus Barang"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Hapus</span>
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>
