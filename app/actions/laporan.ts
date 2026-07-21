@@ -11,6 +11,9 @@ export interface StockReportItem {
   stok_minimum: number
   lokasi: string
   status: string
+  kd_brng: string
+  kd_barang: string
+  kode_barang_lengkap: string
 }
 
 export interface OutgoingReportItem {
@@ -42,6 +45,9 @@ export async function getReportData(
         stok_minimum,
         lokasi,
         status,
+        kd_brng,
+        kd_barang,
+        kode_barang_lengkap,
         kategori_barang ( nama )
       `)
       .order('nama', { ascending: true })
@@ -65,6 +71,9 @@ export async function getReportData(
       stok_minimum: item.stok_minimum,
       lokasi: item.lokasi,
       status: item.status,
+      kd_brng: item.kd_brng || '',
+      kd_barang: item.kd_barang || '',
+      kode_barang_lengkap: item.kode_barang_lengkap || '',
     }))
   } else {
     // Outgoing transactions

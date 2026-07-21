@@ -57,115 +57,146 @@ export default function LaporanPage() {
   }
 
   const generatePDF = (type: 'keluar' | 'stok' | 'menipis', data: unknown[], selectedMonth: number, selectedYear: number) => {
-    const doc = new jsPDF()
+    const isStock = type === 'stok' || type === 'menipis'
+    const doc = new jsPDF(isStock ? { orientation: 'landscape', unit: 'mm', format: 'a4' } : {})
 
-    // Kop Surat (Header)
+    // Landscape A4: 297×210mm → usable x: 14–283 (269mm), center: 149
+    // Portrait  A4: 210×297mm → usable x: 14–196 (182mm), center: 105
+    const centerX  = isStock ? 149 : 105
+    const lineStart = 14
+    const lineEnd   = isStock ? 283 : 196
+    const tableWidth = lineEnd - lineStart
+    const pageBreakY = isStock ? 182 : 270
+
+    // --- Kop Surat ---
     doc.setFont('Helvetica', 'bold')
     doc.setFontSize(14)
-    doc.text('PENGADILAN AGAMA KAJEN CLASS I.B', 105, 15, { align: 'center' })
+    doc.text('PENGADILAN AGAMA KAJEN CLASS I.B', centerX, 15, { align: 'center' })
     doc.setFont('Helvetica', 'normal')
     doc.setFontSize(9)
-    doc.text('Jl. Raya Kajen No. 12, Kajen, Kabupaten Pekalongan, Jawa Tengah 51161', 105, 20, { align: 'center' })
-    doc.text('Telp: (0285) 381666 | Email: pa.kajen@gmail.com', 105, 24, { align: 'center' })
+    doc.text('Jl. Raya Kajen No. 12, Kajen, Kabupaten Pekalongan, Jawa Tengah 51161', centerX, 20, { align: 'center' })
+    doc.text('Telp: (0285) 381666 | Email: pa.kajen@gmail.com', centerX, 24, { align: 'center' })
 
     // Double Line Separator
     doc.setLineWidth(0.8)
-    doc.line(14, 27, 196, 27)
+    doc.line(lineStart, 27, lineEnd, 27)
     doc.setLineWidth(0.2)
-    doc.line(14, 28, 196, 28)
+    doc.line(lineStart, 28, lineEnd, 28)
 
-    // Report Title
+    // --- Report Title ---
     doc.setFont('Helvetica', 'bold')
     doc.setFontSize(11)
-    let title = ''
     if (type === 'keluar') {
       const periodStr = `${selectedMonth > 0 ? monthNames[selectedMonth] : 'Semua Bulan'} ${selectedYear > 0 ? selectedYear : ''}`
-      title = 'LAPORAN TRANSAKSI BARANG KELUAR (ATK)'
-      doc.text(title, 105, 36, { align: 'center' })
+      doc.text('LAPORAN TRANSAKSI BARANG KELUAR (ATK)', centerX, 36, { align: 'center' })
       doc.setFont('Helvetica', 'normal')
       doc.setFontSize(9)
-      doc.text(`Periode: ${periodStr}`, 105, 41, { align: 'center' })
+      doc.text(`Periode: ${periodStr}`, centerX, 41, { align: 'center' })
     } else if (type === 'stok') {
-      title = 'LAPORAN STOK PERSEDIAAN BARANG (ATK)'
-      doc.text(title, 105, 36, { align: 'center' })
+      doc.text('LAPORAN STOK PERSEDIAAN BARANG (ATK)', centerX, 36, { align: 'center' })
     } else {
-      title = 'LAPORAN STOK PERSEDIAAN BARANG MENIPIS (KRITIS)'
-      doc.text(title, 105, 36, { align: 'center' })
+      doc.text('LAPORAN STOK PERSEDIAAN BARANG MENIPIS (KRITIS)', centerX, 36, { align: 'center' })
     }
 
-    // Current Date
-    doc.setFont('Helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, 196, 47, { align: 'right' })
+    // --- Meta Info ---
+    let y: number
+    if (isStock) {
+      doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.text('Kode UAKPB    : 005.01.0300.614710.000.KD', lineStart, 43)
+      doc.text('Instansi            : Pengadilan Agama Kajen Class I.B', lineStart, 48)
+      doc.text(`Tanggal Cetak  : ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, lineStart, 53)
+      y = 62
+    } else {
+      doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, lineEnd, 47, { align: 'right' })
+      y = 53
+    }
 
-    // Table Headers and Rows
-    let y = 53
-    doc.setFont('Helvetica', 'bold')
-    doc.setFontSize(8.5)
-
-    if (type === 'stok' || type === 'menipis') {
-      // Columns: No, Nama Barang, Kategori, Satuan, Lokasi, Min. Stok, Stok, Status
+    // --- Table ---
+    // Helper: draw stock table header
+    const drawStockHeader = (headerY: number) => {
+      doc.setFont('Helvetica', 'bold')
+      doc.setFontSize(7.5)
       doc.setFillColor(235, 235, 235)
-      doc.rect(14, y, 182, 7, 'F')
-      doc.rect(14, y, 182, 7, 'S')
-      doc.text('No', 16, y + 5)
-      doc.text('Nama Barang', 24, y + 5)
-      doc.text('Kategori', 74, y + 5)
-      doc.text('Satuan', 114, y + 5)
-      doc.text('Lokasi', 132, y + 5)
-      doc.text('Min', 162, y + 5)
-      doc.text('Stok', 176, y + 5)
-      doc.text('Status', 188, y + 5)
-      
+      doc.rect(lineStart, headerY, tableWidth, 7, 'F')
+      doc.rect(lineStart, headerY, tableWidth, 7, 'S')
+      // Columns (landscape, 269mm wide):
+      // No(8) | KdBrng(20) | KdBarang(30) | KodeLgk(48) | Nama(45) | Kat(40) | Sat(14) | Lok(30) | Min(12) | Stok(10) | Status(12)
+      doc.text('No',              16, headerY + 5)
+      doc.text('Kd Brng',         23, headerY + 5)
+      doc.text('Kd Barang',       43, headerY + 5)
+      doc.text('Kode Barang Lgk', 73, headerY + 5)
+      doc.text('Nama Barang',    121, headerY + 5)
+      doc.text('Kategori',       166, headerY + 5)
+      doc.text('Satuan',         206, headerY + 5)
+      doc.text('Lokasi',         220, headerY + 5)
+      doc.text('Min',            250, headerY + 5)
+      doc.text('Stok',           262, headerY + 5)
+      doc.text('Status',         272, headerY + 5)
+    }
+
+    if (isStock) {
+      drawStockHeader(y)
       y += 7
       doc.setFont('Helvetica', 'normal')
+      doc.setFontSize(7.5)
+
       data.forEach((rawItem, idx) => {
         const item = rawItem as StockReportItem
-        // Page break check
-        if (y > 270) {
+        if (y > pageBreakY) {
           doc.addPage()
           y = 20
-          doc.setFont('Helvetica', 'bold')
-          doc.setFillColor(235, 235, 235)
-          doc.rect(14, y, 182, 7, 'F')
-          doc.rect(14, y, 182, 7, 'S')
-          doc.text('No', 16, y + 5)
-          doc.text('Nama Barang', 24, y + 5)
-          doc.text('Kategori', 74, y + 5)
-          doc.text('Satuan', 114, y + 5)
-          doc.text('Lokasi', 132, y + 5)
-          doc.text('Min', 162, y + 5)
-          doc.text('Stok', 176, y + 5)
-          doc.text('Status', 188, y + 5)
+          drawStockHeader(y)
           y += 7
           doc.setFont('Helvetica', 'normal')
+          doc.setFontSize(7.5)
         }
 
-        doc.rect(14, y, 182, 7, 'S')
+        doc.rect(lineStart, y, tableWidth, 7, 'S')
         doc.text((idx + 1).toString(), 16, y + 5)
-        
+
+        let kdBrng = item.kd_brng || '-'
+        if (kdBrng.length > 10) kdBrng = kdBrng.substring(0, 9) + '.'
+        doc.text(kdBrng, 23, y + 5)
+
+        let kdBarang = item.kd_barang || '-'
+        if (kdBarang.length > 14) kdBarang = kdBarang.substring(0, 13) + '.'
+        doc.text(kdBarang, 43, y + 5)
+
+        let kdeLgk = item.kode_barang_lengkap || '-'
+        if (kdeLgk.length > 20) kdeLgk = kdeLgk.substring(0, 19) + '.'
+        doc.text(kdeLgk, 73, y + 5)
+
         let nama = item.nama
-        if (nama.length > 28) nama = nama.substring(0, 26) + '..'
-        doc.text(nama, 24, y + 5)
+        if (nama.length > 24) nama = nama.substring(0, 22) + '..'
+        doc.text(nama, 121, y + 5)
 
         let kat = item.kategori
         if (kat.length > 20) kat = kat.substring(0, 18) + '..'
-        doc.text(kat, 74, y + 5)
-        doc.text(item.satuan, 114, y + 5)
-        doc.text(item.lokasi, 132, y + 5)
-        doc.text(item.stok_minimum.toString(), 164, y + 5)
-        doc.text(item.stok.toString(), 178, y + 5)
-        
-        if (item.status === 'Menipis') {
-          doc.setFont('Helvetica', 'bold')
-        }
-        doc.text(item.status, 188, y + 5)
+        doc.text(kat, 166, y + 5)
+
+        doc.text(item.satuan, 206, y + 5)
+
+        let lok = item.lokasi
+        if (lok.length > 14) lok = lok.substring(0, 12) + '..'
+        doc.text(lok, 220, y + 5)
+
+        doc.text(item.stok_minimum.toString(), 250, y + 5)
+        doc.text(item.stok.toString(), 262, y + 5)
+
+        if (item.status === 'Menipis') doc.setFont('Helvetica', 'bold')
+        doc.text(item.status, 272, y + 5)
         doc.setFont('Helvetica', 'normal')
+        doc.setFontSize(7.5)
 
         y += 7
       })
     } else {
-      // Outgoing report columns: No, Tanggal, No. Permintaan, Pemohon, Unit, Barang, Jumlah, Keterangan
+      // Outgoing report columns
+      doc.setFont('Helvetica', 'bold')
+      doc.setFontSize(8.5)
       doc.setFillColor(235, 235, 235)
       doc.rect(14, y, 182, 7, 'F')
       doc.rect(14, y, 182, 7, 'S')
@@ -182,7 +213,7 @@ export default function LaporanPage() {
       doc.setFont('Helvetica', 'normal')
       data.forEach((rawItem, idx) => {
         const item = rawItem as OutgoingReportItem
-        if (y > 270) {
+        if (y > pageBreakY) {
           doc.addPage()
           y = 20
           doc.setFont('Helvetica', 'bold')
@@ -203,35 +234,31 @@ export default function LaporanPage() {
 
         doc.rect(14, y, 182, 7, 'S')
         doc.text((idx + 1).toString(), 15, y + 5)
-        
         const dateFormatted = new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' })
         doc.text(dateFormatted, 22, y + 5)
         doc.text(item.nomor, 42, y + 5)
-
         let pem = item.pemohon
         if (pem.length > 15) pem = pem.substring(0, 13) + '..'
         doc.text(pem, 64, y + 5)
-        
         let unit = item.unit_kerja
         if (unit.length > 10) unit = unit.substring(0, 8) + '..'
         doc.text(unit, 94, y + 5)
-
         let brg = item.nama_barang
         if (brg.length > 18) brg = brg.substring(0, 16) + '..'
         doc.text(brg, 114, y + 5)
-
         doc.text(`${item.jumlah} ${item.satuan}`, 150, y + 5)
-
         let ket = item.keterangan
         if (ket.length > 18) ket = ket.substring(0, 16) + '..'
         doc.text(ket, 164, y + 5)
-
         y += 7
       })
     }
 
-    // Signatures
-    if (y > 230) {
+    // --- Signatures ---
+    const sig1X = isStock ? 50 : 30
+    const sig2X = isStock ? 195 : 130
+    const sigBreakY = isStock ? 155 : 230
+    if (y > sigBreakY) {
       doc.addPage()
       y = 30
     } else {
@@ -240,13 +267,13 @@ export default function LaporanPage() {
 
     doc.setFont('Helvetica', 'normal')
     doc.setFontSize(9)
-    doc.text('Mengetahui,', 30, y)
-    doc.text('Pimpinan Pengadilan Agama Kajen', 30, y + 5)
-    doc.text('__________________________________', 30, y + 25)
+    doc.text('Mengetahui,', sig1X, y)
+    doc.text('Pimpinan Pengadilan Agama Kajen', sig1X, y + 5)
+    doc.text('__________________________________', sig1X, y + 25)
 
-    doc.text('Kajen, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 130, y)
-    doc.text('Pengelola Persediaan', 130, y + 5)
-    doc.text('__________________________________', 130, y + 25)
+    doc.text('Kajen, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), sig2X, y)
+    doc.text('Pengelola Persediaan', sig2X, y + 5)
+    doc.text('__________________________________', sig2X, y + 25)
 
     doc.save(`Laporan_${type}_${new Date().toISOString().split('T')[0]}.pdf`)
   }
@@ -279,20 +306,37 @@ export default function LaporanPage() {
     }
 
     if (type === 'stok' || type === 'menipis') {
-      worksheet.addRow([type === 'stok' ? 'LAPORAN STOK PERSEDIAAN BARANG (ATK)' : 'LAPORAN STOK PERSEDIAAN BARANG MENIPIS (KRITIS)']).font = { bold: true, size: 13 }
-      worksheet.addRow([`Instansi: Pengadilan Agama Kajen Class I.B`])
-      worksheet.addRow([`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`])
+      // Row 1: Title (merged, centered)
+      const titleRow = worksheet.addRow([type === 'stok' ? 'LAPORAN STOK PERSEDIAAN BARANG (ATK)' : 'LAPORAN STOK PERSEDIAAN BARANG MENIPIS (KRITIS)'])
+      titleRow.font = { bold: true, size: 13 }
+      worksheet.mergeCells('A1:K1')
+      titleRow.getCell(1).alignment = { horizontal: 'center' }
+
+      // Row 2: blank
       worksheet.addRow([])
 
-      worksheet.addRow(['No', 'Nama Barang', 'Kategori', 'Satuan', 'Lokasi', 'Stok Minimum', 'Stok', 'Status'])
+      // Rows 3-5: Meta info
+      const uakpbRow = worksheet.addRow(['Kode UAKPB', '005.01.0300.614710.000.KD'])
+      uakpbRow.getCell(1).font = { name: 'Arial', size: 10, bold: true }
+      const instansiRow = worksheet.addRow(['Instansi', 'Pengadilan Agama Kajen Class I.B'])
+      instansiRow.getCell(1).font = { name: 'Arial', size: 10, bold: true }
+      const tanggalRow = worksheet.addRow(['Tanggal Cetak', new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })])
+      tanggalRow.getCell(1).font = { name: 'Arial', size: 10, bold: true }
+
+      // Row 6: blank
+      worksheet.addRow([])
+
+      // Row 7: Column headers
+      worksheet.addRow(['No', 'Kd Brng', 'Kd Barang', 'Kode Barang Lengkap', 'Nama Barang', 'Kategori', 'Satuan', 'Lokasi', 'Stok Minimum', 'Stok', 'Status'])
       worksheet.columns = [
-        { width: 5 }, { width: 32 }, { width: 25 }, { width: 12 }, { width: 22 }, { width: 15 }, { width: 12 }, { width: 15 }
+        { width: 5 }, { width: 12 }, { width: 18 }, { width: 25 }, { width: 32 }, { width: 25 }, { width: 12 }, { width: 22 }, { width: 15 }, { width: 12 }, { width: 15 }
       ]
 
+      // Row 8+: Data
       data.forEach((rawItem, idx) => {
         const item = rawItem as StockReportItem
         worksheet.addRow([
-          idx + 1, item.nama, item.kategori, item.satuan, item.lokasi, item.stok_minimum, item.stok, item.status
+          idx + 1, item.kd_brng, item.kd_barang, item.kode_barang_lengkap, item.nama, item.kategori, item.satuan, item.lokasi, item.stok_minimum, item.stok, item.status
         ])
       })
     } else {
@@ -316,9 +360,10 @@ export default function LaporanPage() {
     }
 
     // Format table styles
+    const headerRowNum = (type === 'stok' || type === 'menipis') ? 7 : 5
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1 || rowNumber === 2 || rowNumber === 3) return
-      const isHeader = (type === 'stok' || type === 'menipis') ? rowNumber === 5 : rowNumber === 5
+      if (rowNumber < headerRowNum) return
+      const isHeader = rowNumber === headerRowNum
 
       row.eachCell((cell) => {
         if (isHeader) {
@@ -326,7 +371,7 @@ export default function LaporanPage() {
           cell.fill = headerStyle.fill as ExcelJS.Fill
           cell.alignment = headerStyle.alignment as Partial<ExcelJS.Alignment>
           cell.border = headerStyle.border as Partial<ExcelJS.Borders>
-        } else if (rowNumber > 5) {
+        } else if (rowNumber > headerRowNum) {
           cell.font = cellStyle.font
           cell.border = cellStyle.border as Partial<ExcelJS.Borders>
         }
