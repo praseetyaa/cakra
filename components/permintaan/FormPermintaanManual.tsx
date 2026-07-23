@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Barang, ProfileWithEmail, UserRole } from '@/lib/types'
 import { createPermintaanManual } from '@/app/actions/permintaan-manual'
-import { User, Plus, Trash2, ArrowLeft, Send, CheckCircle2, AlertCircle, Sparkles, UserPlus } from 'lucide-react'
+import { User, Plus, Trash2, ArrowLeft, Send, CheckCircle2, AlertCircle, Sparkles, UserPlus, Search, ChevronDown, Check } from 'lucide-react'
 import Link from 'next/link'
 
 interface FormPermintaanManualProps {
@@ -24,6 +24,10 @@ export default function FormPermintaanManual({
   const router = useRouter()
   const [modePemohon, setModePemohon] = useState<'terdaftar' | 'baru'>('terdaftar')
   const [selectedUserId, setSelectedUserId] = useState<string>('')
+  const [searchUserQuery, setSearchUserQuery] = useState<string>('')
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false)
+
+  const selectedUser = registeredUsers.find((u) => u.id === selectedUserId)
   
   // Manual / fallback fields
   const [namaManual, setNamaManual] = useState<string>('')
@@ -231,37 +235,44 @@ export default function FormPermintaanManual({
 
             {modePemohon === 'terdaftar' ? (
               <div className="space-y-4 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Pilih Pegawai Terdaftar <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={selectedUserId}
-                    onChange={(e) => handleSelectRegisteredUser(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="">
-                      {registeredUsers.length > 0
-                        ? '-- Pilih Pegawai --'
-                        : '-- Tidak ada pegawai terdaftar (Pilih "Pemohon Baru") --'}
-                    </option>
-                    {registeredUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.nama_lengkap} {u.email ? `(${u.email})` : ''} - Unit: {u.unit_kerja || 'Belum diatur'} [{u.role}]
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedUserId && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">Email Pemohon</span>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">{emailPemohon}</p>
+                {selectedUser ? (
+                  <div className="p-4 bg-white dark:bg-slate-900 border border-emerald-500/40 rounded-xl shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+                          {selectedUser.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={selectedUser.avatar_url} alt={selectedUser.nama_lengkap} className="h-full w-full object-cover" />
+                          ) : (
+                            selectedUser.nama_lengkap.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            {selectedUser.nama_lengkap}
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+                              {selectedUser.role}
+                            </span>
+                          </h4>
+                          <p className="text-xs text-slate-500">{selectedUser.email || 'Email belum diatur'}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedUserId('')
+                          setSearchUserQuery('')
+                          setIsDropdownOpen(true)
+                        }}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-emerald-800 dark:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        Ganti Pemohon
+                      </button>
                     </div>
-                    <div>
+
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Unit Kerja <span className="text-red-500">*</span>
+                        Unit Kerja Pemohon <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -271,6 +282,87 @@ export default function FormPermintaanManual({
                         className="w-full h-10 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Cari & Pilih Pegawai Terdaftar <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchUserQuery}
+                        onFocus={() => setIsDropdownOpen(true)}
+                        onChange={(e) => {
+                          setSearchUserQuery(e.target.value)
+                          setIsDropdownOpen(true)
+                        }}
+                        placeholder="Ketik nama, email, atau unit kerja pegawai..."
+                        className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm"
+                      />
+                      <ChevronDown className="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                    </div>
+
+                    {/* Dropdown Suggestions List */}
+                    {isDropdownOpen && (
+                      <div className="absolute z-20 mt-1.5 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-h-60 overflow-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+                        {registeredUsers.filter((u) => {
+                          const q = searchUserQuery.toLowerCase().trim()
+                          if (!q) return true
+                          return (
+                            u.nama_lengkap.toLowerCase().includes(q) ||
+                            (u.email && u.email.toLowerCase().includes(q)) ||
+                            (u.unit_kerja && u.unit_kerja.toLowerCase().includes(q)) ||
+                            (u.role && u.role.toLowerCase().includes(q))
+                          )
+                        }).length > 0 ? (
+                          registeredUsers
+                            .filter((u) => {
+                              const q = searchUserQuery.toLowerCase().trim()
+                              if (!q) return true
+                              return (
+                                u.nama_lengkap.toLowerCase().includes(q) ||
+                                (u.email && u.email.toLowerCase().includes(q)) ||
+                                (u.unit_kerja && u.unit_kerja.toLowerCase().includes(q)) ||
+                                (u.role && u.role.toLowerCase().includes(q))
+                              )
+                            })
+                            .map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => {
+                                  handleSelectRegisteredUser(u.id)
+                                  setIsDropdownOpen(false)
+                                }}
+                                className="w-full text-left p-3 hover:bg-emerald-50 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-between group"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                    {u.nama_lengkap.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <h5 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-800 dark:group-hover:text-emerald-400">
+                                      {u.nama_lengkap}
+                                    </h5>
+                                    <p className="text-[11px] text-slate-500">
+                                      {u.email || 'Tanpa email'} • Unit: {u.unit_kerja || 'Belum diatur'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                  {u.role}
+                                </span>
+                              </button>
+                            ))
+                        ) : (
+                          <div className="p-4 text-center text-xs text-slate-500">
+                            Tidak ada pegawai yang cocok dengan kata kunci &quot;{searchUserQuery}&quot;.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
