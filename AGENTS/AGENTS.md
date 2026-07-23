@@ -91,6 +91,13 @@ Role user **tidak** ditentukan oleh user sendiri saat register. Alurnya sebagai 
    - Setelah sesi terbentuk, redirect ke `/dashboard`. Middleware (`middleware.ts`) mengecek sesi & role dari tabel `profiles` untuk proteksi route sesuai role.
 6. **Jangan** buat logic role-assignment di frontend/API route. Semua ada di trigger database (lihat `DATABASE-CAKRA.md` section 2.1) — frontend hanya membaca `profiles.role` yang sudah di-assign otomatis.
 
+## 5.2 Alur Pemohon Belum Terklaim (Ghost Pemohon) & Form/Manual Sync
+
+Untuk mendukung pengajuan permintaan via Google Form dan Input Manual oleh staff:
+1. `permintaan.pemohon_id` bersifat optional (nullable). Jika pemohon belum pernah login ke web, `pemohon_id` bernilai `null` dan disimpan dengan identitas fallback `pemohon_email` & `pemohon_nama_manual`.
+2. Saat pegawai tersebut pertama kali login via Google OAuth, trigger database `handle_new_user()` secara otomatis melakukan klaim riwayat: `UPDATE public.permintaan SET pemohon_id = new.id WHERE pemohon_email = new.email AND pemohon_id IS NULL`.
+3. Pengelola/Pimpinan/Admin dapat melakukan input permintaan atas nama pegawai lain di halaman `/permintaan/manual` via Server Action `app/actions/permintaan-manual.ts`.
+
 ## 6. Urutan Pengembangan (Ikuti Urutan Ini)
 
 Jangan lompat ke fitur berikutnya sebelum fitur sebelumnya bisa berjalan & ditest manual.

@@ -53,7 +53,7 @@ Dokumen ini mendefinisikan kebutuhan fungsional dan non-fungsional secara teknis
 - FR-3.5: User dapat memfilter daftar permintaan berdasarkan status (tab: Semua, Menunggu, Disetujui, Ditolak).
 - FR-3.6: User dapat melihat detail permintaan (tanggal, pemohon, unit kerja, barang, jumlah, keperluan, catatan).
 - FR-3.7: Pemohon hanya bisa melihat & membuat permintaan miliknya sendiri.
-- FR-3.8: Pengelola/Pimpinan/Admin dapat membuat permintaan atas nama pegawai lain (input manual) lewat halaman khusus (/permintaan/manual), baik memilih pemohon yang sudah terdaftar maupun input pemohon baru (nama + email) yang belum pernah login. Jika pemohon baru kemudian login via Google, riwayat permintaannya otomatis terhubung ke akunnya.
+- FR-3.8: Pengelola/Pimpinan/Admin dapat membuat permintaan atas nama pegawai lain (input manual) lewat halaman khusus, baik memilih pemohon yang sudah terdaftar maupun input pemohon baru (nama + email) yang belum pernah login. Jika pemohon baru kemudian login via Google, riwayat permintaannya otomatis terhubung ke akunnya.
 
 ### FR-4: Persetujuan (Approval)
 - FR-4.1: Pengelola/Pimpinan dapat menyetujui atau menolak permintaan dari halaman detail.

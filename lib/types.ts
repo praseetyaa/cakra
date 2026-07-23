@@ -51,10 +51,26 @@ export interface Barang {
   updated_at: string
 }
 
+export type SumberPermintaan = 'web' | 'form' | 'manual_admin'
+
+export interface ProfileWithEmail {
+  id: string
+  nama_lengkap: string
+  unit_kerja: string | null
+  role: UserRole
+  email: string
+  avatar_url?: string | null
+  created_at?: string
+}
+
 export interface Permintaan {
   id: string
   nomor: string
-  pemohon_id: string
+  pemohon_id: string | null
+  pemohon_email?: string | null
+  pemohon_nama_manual?: string | null
+  sumber: SumberPermintaan
+  diinput_oleh?: string | null
   unit_kerja: string
   keperluan: string
   catatan: string | null

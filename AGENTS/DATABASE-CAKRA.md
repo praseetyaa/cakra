@@ -73,6 +73,11 @@ begin
     coalesce(prov.role, 'pemohon'),
     new.raw_user_meta_data->>'avatar_url'
   );
+  -- Klaim semua permintaan lama (dari Google Form / input manual) yang menggunakan email ini
+  update public.permintaan
+    set pemohon_id = new.id
+    where pemohon_email = new.email and pemohon_id is null;
+
   return new;
 end;
 $$ language plpgsql security definer;
@@ -124,15 +129,27 @@ alter table barang add column status text
 create table permintaan (
   id uuid primary key default uuid_generate_v4(),
   nomor text unique not null,
-  pemohon_id uuid references profiles(id) not null,
+  pemohon_id uuid references profiles(id),
+  pemohon_email text,
+  pemohon_nama_manual text,
+  sumber text not null default 'web' check (sumber in ('web','form','manual_admin')),
+  diinput_oleh uuid references profiles(id),
   unit_kerja text,
   keperluan text,
   catatan text,
   status text not null default 'menunggu' check (status in ('menunggu','disetujui','ditolak')),
   tanggal timestamptz default now(),
   disetujui_oleh uuid references profiles(id),
-  tanggal_keputusan timestamptz
+  tanggal_keputusan timestamptz,
+  constraint permintaan_pemohon_check check (pemohon_id is not null or pemohon_email is not null)
 );
+
+-- View profiles dengan email untuk lookup Apps Script & Form
+create or replace view public.profiles_with_email as
+select p.id, p.nama_lengkap, p.unit_kerja, p.role, u.email, p.avatar_url, p.created_at
+from public.profiles p
+join auth.users u on u.id = p.id;
+alter view public.profiles_with_email set (security_invoker = true);
 
 -- Sequence untuk nomor otomatis PRM-XXXX
 create sequence permintaan_nomor_seq start 1;

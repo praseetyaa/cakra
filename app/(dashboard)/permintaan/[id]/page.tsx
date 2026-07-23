@@ -67,7 +67,7 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
   const userRole = profile?.role || 'pemohon'
 
   // If role is pemohon and the request doesn't belong to them, deny access
-  if (userRole === 'pemohon' && request.pemohon_id !== user.id) {
+  if (userRole === 'pemohon' && request.pemohon_id !== user.id && request.pemohon_email !== user.email) {
     return (
       <div className="space-y-6 text-center py-12">
         <ShieldAlert className="h-12 w-12 text-red-600 mx-auto" />
@@ -80,12 +80,30 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
     )
   }
 
-  // 3. Fetch related profiles (Pemohon and Approver if any) - Separate queries to avoid joins disambiguation issues
-  const { data: pemohonProfile } = await supabase
-    .from('profiles')
-    .select('nama_lengkap')
-    .eq('id', request.pemohon_id)
-    .single()
+  // 3. Fetch related profiles (Pemohon, Inputter, Approver)
+  let pemohonName = request.pemohon_nama_manual || request.pemohon_email || 'Pemohon'
+  if (request.pemohon_id) {
+    const { data: pemohonProfile } = await supabase
+      .from('profiles')
+      .select('nama_lengkap')
+      .eq('id', request.pemohon_id)
+      .single()
+    if (pemohonProfile) {
+      pemohonName = pemohonProfile.nama_lengkap
+    }
+  }
+
+  let diinputOlehName = ''
+  if (request.diinput_oleh) {
+    const { data: inputterProfile } = await supabase
+      .from('profiles')
+      .select('nama_lengkap')
+      .eq('id', request.diinput_oleh)
+      .single()
+    if (inputterProfile) {
+      diinputOlehName = inputterProfile.nama_lengkap
+    }
+  }
 
   let approverName = ''
   if (request.disetujui_oleh) {
@@ -190,15 +208,53 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
                 <StatusBadge status={request.status} />
               </div>
 
+              {/* Sumber Pengajuan */}
+              <div className="flex justify-between items-center border-t border-slate-50 dark:border-slate-800/30 pt-3">
+                <span className="text-xs text-slate-400">Sumber</span>
+                {request.sumber === 'form' ? (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                    Google Form
+                  </span>
+                ) : request.sumber === 'manual_admin' ? (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    Input Manual Staff
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    Aplikasi Web
+                  </span>
+                )}
+              </div>
+
               {/* Pemohon */}
               <div className="flex flex-col gap-1 border-t border-slate-50 dark:border-slate-800/30 pt-3">
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <User className="h-3.5 w-3.5" /> Pemohon
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <User className="h-3.5 w-3.5" /> Pemohon
+                  </span>
+                  {!request.pemohon_id && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+                      Belum Terklaim
+                    </span>
+                  )}
+                </div>
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  {pemohonProfile?.nama_lengkap || 'Pegawai'}
+                  {pemohonName}
                 </span>
+                {request.pemohon_email && (
+                  <span className="text-xs text-slate-400">{request.pemohon_email}</span>
+                )}
               </div>
+
+              {/* Diinput Oleh (jika manual_admin) */}
+              {diinputOlehName && (
+                <div className="flex flex-col gap-1 border-t border-slate-50 dark:border-slate-800/30 pt-3">
+                  <span className="text-xs text-slate-400">Diinput Oleh</span>
+                  <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                    {diinputOlehName}
+                  </span>
+                </div>
+              )}
 
               {/* Unit Kerja */}
               <div className="flex flex-col gap-1 border-t border-slate-50 dark:border-slate-800/30 pt-3">

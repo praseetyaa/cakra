@@ -42,6 +42,10 @@ export default async function PermintaanPage() {
       unit_kerja,
       keperluan,
       status,
+      sumber,
+      pemohon_id,
+      pemohon_email,
+      pemohon_nama_manual,
       profiles!pemohon_id (
         nama_lengkap
       )

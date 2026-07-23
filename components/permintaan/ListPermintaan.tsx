@@ -52,9 +52,13 @@ export interface RequestItem {
   unit_kerja: string
   keperluan: string
   status: 'menunggu' | 'disetujui' | 'ditolak'
-  profiles: {
+  sumber?: 'web' | 'form' | 'manual_admin'
+  pemohon_id?: string | null
+  pemohon_email?: string | null
+  pemohon_nama_manual?: string | null
+  profiles?: {
     nama_lengkap: string
-  }
+  } | null
 }
 
 export interface Barang {
@@ -183,20 +187,35 @@ export default function ListPermintaan({
             <TabsTrigger value="ditolak">Ditolak</TabsTrigger>
           </TabsList>
 
-          {/* Pemohon can create requests */}
-          {userRole === 'pemohon' && (
-            <Button
-              onClick={() => {
-                setFormError(null)
-                setFormItems([{ barang_id: '', jumlah: 1 }])
-                setIsAddOpen(true)
-              }}
-              className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-700 text-white font-medium flex items-center justify-center gap-2"
-            >
-              <Plus className="h-4.5 w-4.5" />
-              Ajukan Permintaan
-            </Button>
-          )}
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {['pengelola', 'pimpinan', 'admin'].includes(userRole) && (
+              <Link
+                href="/permintaan/manual"
+                className={cn(
+                  buttonVariants({ variant: 'outline' }),
+                  'border-emerald-700/50 text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-medium flex items-center justify-center gap-1.5'
+                )}
+              >
+                <Plus className="h-4 w-4" />
+                <span>Input Manual</span>
+              </Link>
+            )}
+
+            {userRole === 'pemohon' && (
+              <Button
+                onClick={() => {
+                  setFormError(null)
+                  setFormItems([{ barang_id: '', jumlah: 1 }])
+                  setIsAddOpen(true)
+                }}
+                className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-700 text-white font-medium flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4.5 w-4.5" />
+                Ajukan Permintaan
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Requests Table Listings */}
@@ -225,7 +244,26 @@ export default function ListPermintaan({
                         {formatDate(req.tanggal)}
                       </TableCell>
                       <TableCell className="font-medium text-slate-700 dark:text-slate-350">
-                        {req.profiles?.nama_lengkap}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{req.profiles?.nama_lengkap || req.pemohon_nama_manual || req.pemohon_email || 'Pemohon'}</span>
+                            {!req.pemohon_id && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+                                Belum Terklaim
+                              </span>
+                            )}
+                          </div>
+                          {req.sumber === 'form' && (
+                            <span className="w-fit text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                              Google Form
+                            </span>
+                          )}
+                          {req.sumber === 'manual_admin' && (
+                            <span className="w-fit text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              Input Manual
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-slate-500">{req.unit_kerja}</TableCell>
                       <TableCell className="text-slate-600 truncate max-w-[150px]">
