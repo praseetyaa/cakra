@@ -8,15 +8,32 @@ export type ItemInput = { barang_id: string; jumlah: number }
 
 export async function getProfilesWithEmail() {
   const supabase = await createClient()
+  
+  // 1. Try querying profiles_with_email view
   const { data, error } = await supabase
     .from('profiles_with_email')
     .select('*')
+    .order('nama_lengkap', { ascending: true })
 
-  if (error) {
-    console.error('Error fetching profiles_with_email:', error)
+  if (!error && data && data.length > 0) {
+    return data
+  }
+
+  // 2. Fallback: Query profiles table directly so dropdown is never empty
+  const { data: fallbackProfiles, error: fallbackError } = await supabase
+    .from('profiles')
+    .select('id, nama_lengkap, unit_kerja, role, avatar_url, created_at')
+    .order('nama_lengkap', { ascending: true })
+
+  if (fallbackError) {
+    console.error('Error fetching fallback profiles:', fallbackError)
     return []
   }
-  return data || []
+
+  return (fallbackProfiles || []).map((p) => ({
+    ...p,
+    email: '',
+  }))
 }
 
 export async function createPermintaanManual(input: {

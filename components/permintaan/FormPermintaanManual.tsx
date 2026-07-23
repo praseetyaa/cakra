@@ -240,10 +240,14 @@ export default function FormPermintaanManual({
                     onChange={(e) => handleSelectRegisteredUser(e.target.value)}
                     className="w-full h-11 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   >
-                    <option value="">-- Pilih Pegawai --</option>
+                    <option value="">
+                      {registeredUsers.length > 0
+                        ? '-- Pilih Pegawai --'
+                        : '-- Tidak ada pegawai terdaftar (Pilih "Pemohon Baru") --'}
+                    </option>
                     {registeredUsers.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.nama_lengkap} ({u.email}) - Unit: {u.unit_kerja || 'Belum diatur'} [{u.role}]
+                        {u.nama_lengkap} {u.email ? `(${u.email})` : ''} - Unit: {u.unit_kerja || 'Belum diatur'} [{u.role}]
                       </option>
                     ))}
                   </select>
