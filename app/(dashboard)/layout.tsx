@@ -11,6 +11,8 @@ interface UserProfile {
   avatar_url?: string | null
 }
 
+import PushNotificationListener from '@/components/shared/PushNotificationListener'
+
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardLayout({
@@ -62,6 +64,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans">
+      {/* Realtime Push Notification & Toast Listener */}
+      <PushNotificationListener />
+
       {/* Desktop Sidebar */}
       <Sidebar profile={profile} />
 

@@ -23,6 +23,14 @@ export interface UserProfileItem {
   created_at: string
 }
 
+export interface UserProvisioning {
+  email: string
+  nama_lengkap: string | null
+  unit_kerja: string | null
+  role: UserRole
+  created_at: string
+}
+
 export interface KategoriBarang {
   id: string
   nama: string
@@ -117,6 +125,11 @@ export interface Database {
         Row: Profile
         Insert: Omit<Profile, 'created_at'> & { created_at?: string }
         Update: Partial<Profile>
+      }
+      user_provisioning: {
+        Row: UserProvisioning
+        Insert: Omit<UserProvisioning, 'created_at'> & { created_at?: string }
+        Update: Partial<UserProvisioning>
       }
       kategori_barang: {
         Row: KategoriBarang

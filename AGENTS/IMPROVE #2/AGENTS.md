@@ -37,7 +37,6 @@ Jangan menambahkan library alternatif (mis. Firebase, Redux, styled-components) 
     /riwayat/page.tsx
     /laporan/page.tsx
     /notifikasi/page.tsx
-    /pengguna/page.tsx   <- manajemen role user & pre-provisioning (khusus admin)
     /akun/page.tsx
     layout.tsx        <- shared sidebar/bottom-nav
 /components
@@ -45,7 +44,6 @@ Jangan menambahkan library alternatif (mis. Firebase, Redux, styled-components) 
   /dashboard         <- StatCard, GrafikTransaksi, dll
   /permintaan        <- FormPermintaan, ListPermintaan, DetailPermintaan
   /persediaan        <- TabelBarang, FormBarang, DetailStok
-  /pengguna          <- TabelPengguna, ModalTambahProvisioning
   /shared            <- Navbar, Sidebar, BottomNav, StatusBadge
 /lib
   /supabase
@@ -53,7 +51,7 @@ Jangan menambahkan library alternatif (mis. Firebase, Redux, styled-components) 
     server.ts        <- server client (untuk Server Components/Actions)
   /types.ts          <- TypeScript types hasil generate dari skema Supabase
   /utils.ts
-/app/actions         <- Server Actions (permintaan, auth, pengguna, dll)
+/app/actions         <- Server Actions (create permintaan, approve, dll)
 ```
 
 ## 4. Konvensi Coding
@@ -78,7 +76,7 @@ Jangan menambahkan library alternatif (mis. Firebase, Redux, styled-components) 
 
 Role user **tidak** ditentukan oleh user sendiri saat register. Alurnya sebagai berikut:
 
-1. Admin mengisi tabel `user_provisioning` (email → role, unit_kerja, nama_lengkap) **sebelum** orang yang bersangkutan login pertama kali. Ini bisa dilakukan via UI aplikasi (/pengguna) atau Table Editor Supabase.
+1. Admin mengisi tabel `user_provisioning` (email → role, unit_kerja, nama_lengkap) **sebelum** orang yang bersangkutan login pertama kali. Ini dilakukan manual lewat Table Editor Supabase oleh admin, bukan lewat UI aplikasi (di fase awal).
 2. Saat user klik "Masuk dengan Google" pertama kali, Supabase Auth membuat row baru di `auth.users` dengan UUID baru.
 3. Trigger database `handle_new_user()` otomatis berjalan:
    - Cek apakah `email` user ada di `user_provisioning` → kalau ada, pakai `role` & `unit_kerja` dari sana.
@@ -90,6 +88,7 @@ Role user **tidak** ditentukan oleh user sendiri saat register. Alurnya sebagai 
    - Buat route handler di `/app/auth/callback/route.ts` untuk exchange code jadi session (`supabase.auth.exchangeCodeForSession`).
    - Setelah sesi terbentuk, redirect ke `/dashboard`. Middleware (`middleware.ts`) mengecek sesi & role dari tabel `profiles` untuk proteksi route sesuai role.
 6. **Jangan** buat logic role-assignment di frontend/API route. Semua ada di trigger database (lihat `DATABASE-CAKRA.md` section 2.1) — frontend hanya membaca `profiles.role` yang sudah di-assign otomatis.
+7. Data seed lama (3 row manual di tabel `profiles` untuk admin/pengelola/pimpinan) belum terhubung ke akun Google manapun. Agent tidak perlu menangani migrasi data ini di kode — itu dilakukan manual oleh admin lewat database setelah email asli diketahui.
 
 ## 6. Urutan Pengembangan (Ikuti Urutan Ini)
 

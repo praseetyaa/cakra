@@ -2,7 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { listUsers } from '@/app/actions/pengguna'
+import { listUsers, listUserProvisioning } from '@/app/actions/pengguna'
 import TabelPengguna from '@/components/pengguna/TabelPengguna'
 import { ShieldAlert, Users, ArrowLeft } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
@@ -44,13 +44,14 @@ export default async function PenggunaPage() {
     )
   }
 
-  // 3. Fetch user list
-  const { data: users, error } = await listUsers()
+  // 3. Fetch active user list and provisioning list
+  const { data: users, error: usersError } = await listUsers()
+  const { data: provisioningList } = await listUserProvisioning()
 
-  if (error || !users) {
+  if (usersError || !users) {
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 dark:bg-red-950/30 dark:border-red-900 dark:text-red-300">
-        <p className="text-xs font-semibold">Gagal memuat daftar pengguna: {error}</p>
+        <p className="text-xs font-semibold">Gagal memuat daftar pengguna: {usersError}</p>
       </div>
     )
   }
@@ -67,16 +68,20 @@ export default async function PenggunaPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-1 flex items-center gap-2.5">
             <Users className="h-6 w-6 text-emerald-800 dark:text-emerald-400" />
-            Kelola Hak Akses Pengguna
+            Kelola Hak Akses & Role Pengguna
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Atur dan ubah wewenang/role pengguna aplikasi CAKRA (Pemohon, Pengelola Stok, Pimpinan, Administrator).
+            Atur role pengguna aktif serta daftarkan email Google pegawai baru (pre-assign role) sebelum mereka login ke aplikasi CAKRA.
           </p>
         </div>
       </div>
 
-      {/* Users Table Component */}
-      <TabelPengguna initialUsers={users} currentUserId={user.id} />
+      {/* Users Table & Provisioning Component */}
+      <TabelPengguna
+        initialUsers={users}
+        initialProvisioning={provisioningList || []}
+        currentUserId={user.id}
+      />
     </div>
   )
 }

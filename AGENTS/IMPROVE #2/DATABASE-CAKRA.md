@@ -34,7 +34,7 @@ create table profiles (
 
 ## 2.1 Tabel `user_provisioning` — Pre-Assign Role Sebelum User Login
 
-Karena UUID user baru terbentuk saat pertama kali login (bukan sebelumnya), role/unit_kerja untuk user yang **belum pernah login** harus disimpan berdasarkan **email**, bukan UUID. Admin mengisi tabel ini manual atau lewat UI /pengguna untuk pegawai yang sudah diketahui perannya (admin, pengelola, pimpinan), sebelum orang tersebut login pertama kali.
+Karena UUID user baru terbentuk saat pertama kali login (bukan sebelumnya), role/unit_kerja untuk user yang **belum pernah login** harus disimpan berdasarkan **email**, bukan UUID. Admin mengisi tabel ini manual lewat Table Editor Supabase untuk pegawai yang sudah diketahui perannya (admin, pengelola, pimpinan), sebelum orang tersebut login pertama kali.
 
 ```sql
 create table user_provisioning (
@@ -52,6 +52,17 @@ create policy "user_provisioning_admin_only" on user_provisioning for all using 
   exists (select 1 from profiles where id = auth.uid() and role = 'admin')
 );
 ```
+
+**Cara pakai:** begitu tahu email Google seseorang, admin insert row di sini dulu, contoh:
+```sql
+insert into user_provisioning (email, nama_lengkap, unit_kerja, role) values
+('admin@paKajen.go.id', 'Administrator Sistem CAKRA', 'Subbag PTIP / TIM IT', 'admin'),
+('pengelola@paKajen.go.id', 'Ahmad Pengelola, S.Kom.', 'Subbag Umum & Keuangan', 'pengelola'),
+('pimpinan@paKajen.go.id', 'Drs. H. Pimpinan Supriyadi, M.H.', 'Pimpinan / Ketua PA Kajen', 'pimpinan');
+```
+Ganti email di atas dengan email Google asli begitu sudah didapat. Setelah orang tersebut login via Google, trigger di bawah otomatis membaca row ini dan meng-assign role yang benar ke profile barunya.
+
+> Catatan: 3 row lama di tabel `profiles` (dengan UUID hasil seed manual) TIDAK otomatis terhubung ke akun Google manapun. Biarkan dulu apa adanya — setelah orang yang bersangkutan login pertama kali dan profile barunya ter-assign role benar via `user_provisioning`, kamu bisa hapus manual row seed lama tersebut lewat Table Editor.
 
 ### Trigger: Buat Profile Otomatis Saat User Login/Register via Google
 
@@ -199,29 +210,17 @@ create table notifikasi (
 
 ## 9. Trigger Otomatis: Approval → Update Stok + Notifikasi
 
+Ini trigger paling penting — jalan saat status permintaan berubah jadi `disetujui`.
+
 ```sql
-create or replace function handle_approval()
+create function handle_approval()
 returns trigger as $$
 declare
   item record;
   sisa_stok integer;
 begin
   if new.status = 'disetujui' and old.status = 'menunggu' then
-    -- Guard: Validasi stok mencukupi untuk SEMUA item
-    for item in
-      select pd.jumlah, b.nama, b.stok
-      from permintaan_detail pd
-      join barang b on b.id = pd.barang_id
-      where pd.permintaan_id = new.id
-    loop
-      if item.stok < item.jumlah then
-        raise exception 'Stok % tidak mencukupi (tersedia: %, diminta: %)',
-          item.nama, item.stok, item.jumlah
-          using errcode = 'P0001', hint = 'STOCK_INSUFFICIENT';
-      end if;
-    end loop;
-
-    -- Potong stok
+    -- loop semua item di permintaan ini
     for item in
       select * from permintaan_detail where permintaan_id = new.id
     loop
@@ -233,6 +232,7 @@ begin
       insert into riwayat_stok (barang_id, jumlah, jenis, referensi_id, keterangan)
       values (item.barang_id, -item.jumlah, 'keluar', new.id, 'Persetujuan ' || new.nomor);
 
+      -- cek stok menipis, kirim notifikasi ke pengelola
       if sisa_stok <= (select stok_minimum from barang where id = item.barang_id) then
         insert into notifikasi (user_id, judul, pesan, jenis)
         select id, 'Stok Menipis',
@@ -242,6 +242,7 @@ begin
       end if;
     end loop;
 
+    -- notifikasi ke pemohon
     insert into notifikasi (user_id, judul, pesan, jenis)
     values (new.pemohon_id, 'Permintaan Disetujui', new.nomor || ' telah disetujui', 'disetujui');
   end if;
@@ -273,6 +274,7 @@ alter table permintaan_detail enable row level security;
 alter table riwayat_stok enable row level security;
 alter table notifikasi enable row level security;
 
+-- PROFILES: user bisa lihat & update profil sendiri; pengelola/pimpinan/admin bisa lihat semua
 create policy "profiles_select" on profiles for select
   using (auth.uid() = id or exists (
     select 1 from profiles p where p.id = auth.uid() and p.role in ('pengelola','pimpinan','admin')
@@ -280,6 +282,7 @@ create policy "profiles_select" on profiles for select
 create policy "profiles_update_own" on profiles for update
   using (auth.uid() = id);
 
+-- BARANG: semua user login bisa lihat; hanya pengelola/admin bisa insert/update
 create policy "barang_select" on barang for select using (auth.role() = 'authenticated');
 create policy "barang_insert" on barang for insert with check (
   exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','admin'))
@@ -288,6 +291,7 @@ create policy "barang_update" on barang for update using (
   exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','admin'))
 );
 
+-- PERMINTAAN: pemohon lihat & buat punya sendiri; pengelola/pimpinan lihat semua & bisa update (approval)
 create policy "permintaan_select" on permintaan for select using (
   pemohon_id = auth.uid() or exists (
     select 1 from profiles where id = auth.uid() and role in ('pengelola','pimpinan','admin')
@@ -298,6 +302,7 @@ create policy "permintaan_update_approval" on permintaan for update using (
   exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','pimpinan','admin'))
 );
 
+-- PERMINTAAN_DETAIL: ikut aturan permintaan induknya
 create policy "permintaan_detail_select" on permintaan_detail for select using (
   exists (select 1 from permintaan p where p.id = permintaan_id and (
     p.pemohon_id = auth.uid() or exists (
@@ -309,10 +314,41 @@ create policy "permintaan_detail_insert" on permintaan_detail for insert with ch
   exists (select 1 from permintaan p where p.id = permintaan_id and p.pemohon_id = auth.uid())
 );
 
+-- RIWAYAT_STOK: hanya pengelola/pimpinan/admin
 create policy "riwayat_stok_select" on riwayat_stok for select using (
   exists (select 1 from profiles where id = auth.uid() and role in ('pengelola','pimpinan','admin'))
 );
 
+-- NOTIFIKASI: hanya untuk diri sendiri
 create policy "notifikasi_select" on notifikasi for select using (user_id = auth.uid());
 create policy "notifikasi_update" on notifikasi for update using (user_id = auth.uid());
 ```
+
+---
+
+## 11. Realtime (untuk notifikasi live)
+
+Aktifkan realtime di Supabase Dashboard → Database → Replication, untuk tabel:
+- `notifikasi`
+- `permintaan`
+
+Atau via SQL:
+```sql
+alter publication supabase_realtime add table notifikasi;
+alter publication supabase_realtime add table permintaan;
+```
+
+---
+
+## 12. Entity Relationship Diagram (Ringkas)
+
+```
+profiles ──< permintaan >── permintaan_detail >── barang
+   │                                                  │
+   └──< notifikasi                     riwayat_stok ──┘
+```
+
+- 1 profile bisa punya banyak permintaan
+- 1 permintaan bisa punya banyak permintaan_detail (multi-item)
+- 1 barang bisa muncul di banyak permintaan_detail & riwayat_stok
+- 1 profile bisa punya banyak notifikasi

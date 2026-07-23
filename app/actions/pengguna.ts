@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { UserRole, UserProfileItem } from '@/lib/types'
+import type { UserRole, UserProfileItem, UserProvisioning } from '@/lib/types'
 
 export async function listUsers() {
   const supabase = await createClient()
@@ -58,6 +58,115 @@ export async function updateUserRole(userId: string, newRole: UserRole) {
     .from('profiles')
     .update({ role: newRole })
     .eq('id', userId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/pengguna')
+  return { success: true }
+}
+
+export async function listUserProvisioning() {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
+  }
+
+  // Security check: caller must be admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'admin') {
+    return { error: 'Akses ditolak. Hanya administrator yang dapat melihat data provisioning.' }
+  }
+
+  const { data, error } = await supabase
+    .from('user_provisioning')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { data: data as UserProvisioning[] }
+}
+
+export async function createUserProvisioning(
+  email: string,
+  nama_lengkap: string,
+  unit_kerja: string,
+  role: UserRole
+) {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
+  }
+
+  // Security check: caller must be admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'admin') {
+    return { error: 'Akses ditolak. Hanya administrator yang dapat menambahkan user provisioning.' }
+  }
+
+  const cleanEmail = email.trim().toLowerCase()
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return { error: 'Format email tidak valid.' }
+  }
+
+  const { error } = await supabase
+    .from('user_provisioning')
+    .upsert({
+      email: cleanEmail,
+      nama_lengkap: nama_lengkap.trim() || null,
+      unit_kerja: unit_kerja.trim() || null,
+      role: role,
+    })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/pengguna')
+  return { success: true }
+}
+
+export async function deleteUserProvisioning(email: string) {
+  const supabase = await createClient()
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
+  }
+
+  // Security check: caller must be admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'admin') {
+    return { error: 'Akses ditolak. Hanya administrator yang dapat menghapus user provisioning.' }
+  }
+
+  const { error } = await supabase
+    .from('user_provisioning')
+    .delete()
+    .eq('email', email)
 
   if (error) {
     return { error: error.message }

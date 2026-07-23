@@ -72,25 +72,8 @@ export async function createPermintaan(prevState: unknown, formData: FormData) {
     return { error: detailError.message }
   }
 
-  // 3. Send notifications for new request to staff (pengelola, pimpinan, admin)
-  const { data: staffProfiles } = await supabase
-    .from('profiles')
-    .select('id')
-    .in('role', ['pengelola', 'pimpinan', 'admin'])
-
-  if (staffProfiles && staffProfiles.length > 0) {
-    const notifications = staffProfiles.map((p) => ({
-      user_id: p.id,
-      judul: 'Permintaan Baru',
-      pesan: `Permintaan ${reqData.nomor || 'Baru'} diajukan oleh Unit ${unit_kerja}`,
-      jenis: 'permintaan_baru',
-    }))
-
-    const { error: notifError } = await supabase.from('notifikasi').insert(notifications)
-    if (notifError) {
-      console.error('Failed to insert new request notifications:', notifError)
-    }
-  }
+  // NOTE: Notifikasi permintaan baru ditangani oleh database trigger `on_permintaan_created` di Supabase (security definer).
+  // Tidak perlu insert manual dari client/action agar tidak terhalang RLS (Row Level Security).
 
   revalidatePath('/permintaan')
   return { success: true }
