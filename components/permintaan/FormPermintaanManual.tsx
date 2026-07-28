@@ -4,9 +4,8 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Barang, ProfileWithEmail, UserRole } from '@/lib/types'
 import { createPermintaanManual } from '@/app/actions/permintaan-manual'
-import { User, Plus, Trash2, ArrowLeft, Send, CheckCircle2, AlertCircle, Sparkles, UserPlus, Search, ChevronDown, Check, FileSpreadsheet } from 'lucide-react'
+import { User, Plus, Trash2, ArrowLeft, Send, CheckCircle2, AlertCircle, Sparkles, UserPlus, Search, ChevronDown, Check } from 'lucide-react'
 import Link from 'next/link'
-import ModalImportPermintaanManual from '@/components/permintaan/ModalImportPermintaanManual'
 
 interface FormPermintaanManualProps {
   barangList: Barang[]
@@ -47,33 +46,6 @@ export default function FormPermintaanManual({
   const [loading, setLoading] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-
-  // Modal import Excel state
-  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false)
-
-  const handleApplyImportToForm = (
-    importedItems: { barang_id: string; jumlah: number }[],
-    headerData?: {
-      namaPemohon?: string
-      emailPemohon?: string
-      unitKerja?: string
-      keperluan?: string
-      catatan?: string
-    }
-  ) => {
-    if (importedItems && importedItems.length > 0) {
-      setItems(importedItems)
-    }
-    if (headerData) {
-      if (headerData.namaPemohon && !namaManual) setNamaManual(headerData.namaPemohon)
-      if (headerData.emailPemohon && !emailPemohon) setEmailPemohon(headerData.emailPemohon)
-      if (headerData.unitKerja && !unitKerja) setUnitKerja(headerData.unitKerja)
-      if (headerData.keperluan && !keperluan) setKeperluan(headerData.keperluan)
-      if (headerData.catatan && !catatan) setCatatan(headerData.catatan)
-    }
-    setSuccessMsg('Data barang berhasil dimasukkan ke form dari file Excel!')
-  }
-
 
   // Handle select user from dropdown
   const handleSelectRegisteredUser = (userId: string) => {
@@ -197,23 +169,13 @@ export default function FormPermintaanManual({
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-6 md:p-8 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Input Permintaan Manual
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Ajukan permintaan barang atas nama pegawai lain (baik yang sudah memiliki akun web maupun pemohon baru).
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsImportModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-bold shadow-sm transition-all shrink-0"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
-            Import via Excel
-          </button>
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            Input Permintaan Manual
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Ajukan permintaan barang atas nama pegawai lain (baik yang sudah memiliki akun web maupun pemohon baru).
+          </p>
         </div>
 
 
@@ -612,22 +574,6 @@ export default function FormPermintaanManual({
           </div>
         </form>
       </div>
-
-      {/* Modal Import Excel Permintaan Manual */}
-      <ModalImportPermintaanManual
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        barangList={barangList}
-        registeredUsers={registeredUsers}
-        onApplyToForm={handleApplyImportToForm}
-        onBatchSuccess={() => {
-          setSuccessMsg('Batch permintaan manual berhasil di-import via Excel!')
-          setTimeout(() => {
-            router.push('/permintaan')
-            router.refresh()
-          }, 1500)
-        }}
-      />
     </div>
 
   )
