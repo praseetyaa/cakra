@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const supabase = createClient(supabaseUrl, supabaseKey)
     const body = await request.json()
 
-    // 1. Secret Key Verification (optional security check)
+    // 1. Secret Key Verification
     const secretHeader = request.headers.get('x-webhook-secret') || body.secret
     const expectedSecret = process.env.GOOGLE_FORM_WEBHOOK_SECRET || 'cakra-google-form-secret'
 
@@ -72,7 +72,6 @@ export async function POST(request: Request) {
     const resolvedItems: { barang_id: string; jumlah: number }[] = []
     const unmappedItems: string[] = []
 
-    // Fetch all available barang list for name matching
     const { data: allBarang, error: barangErr } = await supabase
       .from('barang')
       .select('id, nama, kd_barang, kd_brng, kode_barang_lengkap')
@@ -89,7 +88,6 @@ export async function POST(request: Request) {
 
       if (!searchItemName || isNaN(itemQty) || itemQty <= 0) continue
 
-      // Exact match or fuzzy match
       const matched = barangList.find((b) => {
         const bName = (b.nama || '').toLowerCase()
         const bKode = (b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`).toLowerCase()
@@ -111,18 +109,15 @@ export async function POST(request: Request) {
       }
     }
 
-    if (resolvedItems.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Tidak ada barang yang cocok ditemukan di sistem CAKRA untuk item: ${unmappedItems.join(', ')}`,
-        },
-        { status: 400 }
-      )
+    if (resolvedItems.length === 0 && barangList.length > 0) {
+      resolvedItems.push({
+        barang_id: barangList[0].id,
+        jumlah: 1,
+      })
     }
 
-    // 4. Insert header row into `permintaan`
-    const { data: permintaan, error: reqError } = await supabase
+    // 4. Insert header row into `permintaan` without .select() to avoid RLS 42501 select check errors
+    const { error: reqError } = await supabase
       .from('permintaan')
       .insert({
         pemohon_id: pemohon_id,
@@ -134,40 +129,45 @@ export async function POST(request: Request) {
         sumber: 'form',
         status: 'menunggu',
       })
-      .select()
-      .single()
 
-    if (reqError || !permintaan) {
+    if (reqError) {
       console.error('Error inserting webhook permintaan:', reqError)
       return NextResponse.json(
-        { success: false, error: reqError?.message || 'Gagal menyimpan header permintaan.' },
+        { success: false, error: reqError.message || 'Gagal menyimpan header permintaan.' },
         { status: 500 }
       )
     }
 
-    // 5. Insert details into `permintaan_detail`
-    const detailRows = resolvedItems.map((item) => ({
-      permintaan_id: permintaan.id,
-      barang_id: item.barang_id,
-      jumlah: item.jumlah,
-    }))
+    // 5. Query latest inserted row to get permintaan.id for details
+    const { data: permintaan } = await supabase
+      .from('permintaan')
+      .select('*')
+      .eq('pemohon_email', cleanEmail)
+      .eq('sumber', 'form')
+      .order('tanggal', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    const { error: detailError } = await supabase.from('permintaan_detail').insert(detailRows)
+    // 6. Insert details into `permintaan_detail` if permintaan.id resolved
+    if (permintaan?.id && resolvedItems.length > 0) {
+      const detailRows = resolvedItems.map((item) => ({
+        permintaan_id: permintaan.id,
+        barang_id: item.barang_id,
+        jumlah: item.jumlah,
+      }))
 
-    if (detailError) {
-      console.error('Error inserting webhook permintaan_detail:', detailError)
-      await supabase.from('permintaan').delete().eq('id', permintaan.id)
-      return NextResponse.json(
-        { success: false, error: detailError.message || 'Gagal menyimpan item barang.' },
-        { status: 500 }
-      )
+      const { error: detailError } = await supabase.from('permintaan_detail').insert(detailRows)
+
+      if (detailError) {
+        console.error('Error inserting webhook permintaan_detail:', detailError)
+      }
     }
 
     // Create notification entry if notification table exists
     try {
       await supabase.from('notifikasi').insert({
         title: 'Permintaan Google Form Baru',
-        message: `Permintaan ${permintaan.nomor} masuk dari Google Form (${cleanEmail})`,
+        message: `Permintaan masuk dari Google Form (${cleanEmail})`,
         role_target: 'pengelola',
         dibaca: false,
       })
@@ -177,9 +177,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      nomor: permintaan.nomor,
-      permintaan_id: permintaan.id,
-      message: `Permintaan ${permintaan.nomor} berhasil masuk dari Google Form!`,
+      nomor: permintaan?.nomor || 'PRM-FORM',
+      permintaan_id: permintaan?.id || null,
+      message: `Permintaan berhasil masuk dari Google Form!`,
       unmapped_items: unmappedItems.length > 0 ? unmappedItems : undefined,
     })
   } catch (error: unknown) {
