@@ -54,25 +54,18 @@ export async function POST(request: Request) {
     let pemohon_id: string | null = null
     const cleanEmail = String(email).trim().toLowerCase()
 
-    const { data: profile } = await supabase
-      .from('profiles_with_email')
-      .select('id')
-      .eq('email', cleanEmail)
-      .maybeSingle()
-
-    if (profile) {
-      pemohon_id = profile.id
-    } else {
-      // Check fallback profiles table if email matches
-      const { data: directProfile } = await supabase
-        .from('profiles')
+    try {
+      const { data: profile } = await supabase
+        .from('profiles_with_email')
         .select('id')
-        .eq('id', cleanEmail)
+        .eq('email', cleanEmail)
         .maybeSingle()
 
-      if (directProfile) {
-        pemohon_id = directProfile.id
+      if (profile?.id) {
+        pemohon_id = profile.id
       }
+    } catch (err) {
+      console.warn('Error querying profiles_with_email view:', err)
     }
 
     // 3. Resolve items to barang_id in database
@@ -80,9 +73,13 @@ export async function POST(request: Request) {
     const unmappedItems: string[] = []
 
     // Fetch all available barang list for name matching
-    const { data: allBarang } = await supabase
+    const { data: allBarang, error: barangErr } = await supabase
       .from('barang')
       .select('id, nama, kd_barang, kd_brng, kode_barang_lengkap')
+
+    if (barangErr) {
+      console.error('Error fetching barang list:', barangErr)
+    }
 
     const barangList = allBarang || []
 
@@ -94,7 +91,7 @@ export async function POST(request: Request) {
 
       // Exact match or fuzzy match
       const matched = barangList.find((b) => {
-        const bName = b.nama.toLowerCase()
+        const bName = (b.nama || '').toLowerCase()
         const bKode = (b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`).toLowerCase()
         return (
           bName === searchItemName ||
