@@ -2,12 +2,14 @@
  
 import React, { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createPermintaan } from '@/app/actions/permintaan'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import ModalImportPermintaanManual from '@/components/permintaan/ModalImportPermintaanManual'
 import {
   Table,
   TableBody,
@@ -41,9 +43,11 @@ import {
   XCircle,
   Clock,
   ShieldAlert,
-  AlertTriangle
+  AlertTriangle,
+  FileSpreadsheet
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
 
 export interface RequestItem {
   id: string
@@ -61,12 +65,9 @@ export interface RequestItem {
   } | null
 }
 
-export interface Barang {
-  id: string
-  nama: string
-  stok: number
-  satuan: string
-}
+import { Barang } from '@/lib/types'
+export type { Barang }
+
 
 interface UserProfile {
   nama_lengkap: string
@@ -92,12 +93,15 @@ export default function ListPermintaan({
   userRole,
   userProfile
 }: ListPermintaanProps) {
+  const router = useRouter()
   // Tabs status
   const [activeTab, setActiveTab] = useState('ALL')
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
   const [formItems, setFormItems] = useState<FormItem[]>([{ barang_id: '', jumlah: 1 }])
+
 
   const [formError, setFormError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -190,17 +194,29 @@ export default function ListPermintaan({
           {/* Action buttons */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {['pengelola', 'pimpinan', 'admin'].includes(userRole) && (
-              <Link
-                href="/permintaan/manual"
-                className={cn(
-                  buttonVariants({ variant: 'outline' }),
-                  'border-emerald-700/50 text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-medium flex items-center justify-center gap-1.5'
-                )}
-              >
-                <Plus className="h-4 w-4" />
-                <span>Input Manual</span>
-              </Link>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsImportOpen(true)}
+                  className="border-emerald-700/50 text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-medium flex items-center justify-center gap-1.5"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Import Excel</span>
+                </Button>
+                <Link
+                  href="/permintaan/manual"
+                  className={cn(
+                    buttonVariants({ variant: 'outline' }),
+                    'border-emerald-700/50 text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-medium flex items-center justify-center gap-1.5'
+                  )}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Input Manual</span>
+                </Link>
+              </>
             )}
+
 
             {userRole === 'pemohon' && (
               <Button
@@ -463,6 +479,19 @@ export default function ListPermintaan({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Import Permintaan Excel untuk Pengelola/Pimpinan/Admin */}
+      <ModalImportPermintaanManual
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        barangList={barangList}
+        registeredUsers={[]}
+        onApplyToForm={() => {}}
+        onBatchSuccess={() => {
+          router.refresh()
+        }}
+      />
     </div>
   )
 }
+

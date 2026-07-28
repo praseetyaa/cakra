@@ -40,3 +40,7 @@ next-env.d.ts
 
 # uploads / media
 /public/uploads/
+
+# test artifacts
+.context/
+

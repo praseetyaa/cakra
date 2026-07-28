@@ -123,3 +123,91 @@ export async function createPermintaanManual(input: {
   revalidatePath('/permintaan')
   return { success: true, nomor: permintaan.nomor }
 }
+
+export type BulkPermintaanGroupInput = {
+  pemohon_id?: string | null
+  pemohon_nama_manual?: string | null
+  pemohon_email: string
+  unit_kerja: string
+  keperluan: string
+  catatan?: string
+  items: { barang_id: string; jumlah: number }[]
+}
+
+export async function importPermintaanManualBulk(groups: BulkPermintaanGroupInput[]) {
+  const supabase = await createClient()
+
+  // 1. Check session & role
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { error: 'Sesi kedaluwarsa. Silakan login kembali.' }
+  }
+
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!userProfile || !['pengelola', 'pimpinan', 'admin'].includes(userProfile.role)) {
+    return { error: 'Anda tidak memiliki wewenang untuk melakukan import manual.' }
+  }
+
+  if (!groups || groups.length === 0) {
+    return { error: 'Tidak ada data permintaan valid untuk di-import.' }
+  }
+
+  let successCount = 0
+  const errors: string[] = []
+
+  for (const group of groups) {
+    if (!group.pemohon_email || !group.unit_kerja || !group.keperluan || !group.items || group.items.length === 0) {
+      continue
+    }
+
+    // Insert header
+    const { data: permintaan, error: reqError } = await supabase
+      .from('permintaan')
+      .insert({
+        pemohon_id: group.pemohon_id || null,
+        pemohon_email: group.pemohon_email,
+        pemohon_nama_manual: group.pemohon_id ? null : (group.pemohon_nama_manual || null),
+        unit_kerja: group.unit_kerja,
+        keperluan: group.keperluan,
+        catatan: group.catatan || 'Import Batch Excel',
+        sumber: 'manual_admin',
+        diinput_oleh: user.id,
+        status: 'menunggu',
+      })
+      .select()
+      .single()
+
+    if (reqError || !permintaan) {
+      errors.push(`Gagal membuat permintaan untuk ${group.pemohon_email}: ${reqError?.message}`)
+      continue
+    }
+
+    // Insert details
+    const details = group.items.map((item) => ({
+      permintaan_id: permintaan.id,
+      barang_id: item.barang_id,
+      jumlah: item.jumlah,
+    }))
+
+    const { error: detailError } = await supabase.from('permintaan_detail').insert(details)
+    if (detailError) {
+      await supabase.from('permintaan').delete().eq('id', permintaan.id)
+      errors.push(`Gagal menyimpan detail barang untuk ${group.pemohon_email}: ${detailError.message}`)
+    } else {
+      successCount++
+    }
+  }
+
+  revalidatePath('/permintaan')
+  return {
+    success: successCount > 0,
+    count: successCount,
+    errors: errors.length > 0 ? errors : undefined,
+  }
+}
+
