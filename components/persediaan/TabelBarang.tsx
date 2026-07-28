@@ -194,45 +194,48 @@ export default function TabelBarang({
             />
           </div>
 
-          {/* Status filter */}
-          <div className="w-full sm:w-44 shrink-0">
-            <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'ALL')}>
-              <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
-                <SelectValue placeholder="Status Stok">
-                  {statusFilter === 'ALL'
-                    ? 'Semua Status'
-                    : statusFilter === 'Aman'
-                    ? 'Stok Aman'
-                    : 'Stok Menipis'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="text-xs">Semua Status</SelectItem>
-                <SelectItem value="Aman" className="text-xs">Stok Aman</SelectItem>
-                <SelectItem value="Menipis" className="text-xs">Stok Menipis</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Status & Category filters */}
+          <div className="grid grid-cols-2 gap-2.5 w-full sm:flex sm:w-auto shrink-0 justify-center">
+            {/* Status filter */}
+            <div className="w-full sm:w-44 shrink-0">
+              <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'ALL')}>
+                <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
+                  <SelectValue placeholder="Status Stok">
+                    {statusFilter === 'ALL'
+                      ? 'Semua Status'
+                      : statusFilter === 'Aman'
+                      ? 'Stok Aman'
+                      : 'Stok Menipis'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">Semua Status</SelectItem>
+                  <SelectItem value="Aman" className="text-xs">Stok Aman</SelectItem>
+                  <SelectItem value="Menipis" className="text-xs">Stok Menipis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Category filter */}
-          <div className="w-full sm:w-48 shrink-0">
-            <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || 'ALL')}>
-              <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
-                <SelectValue placeholder="Kategori">
-                  {categoryFilter === 'ALL'
-                    ? 'Semua Kategori'
-                    : categoryList.find((c) => c.id === categoryFilter)?.nama || 'Kategori'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="text-xs">Semua Kategori</SelectItem>
-                {categoryList.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id} className="text-xs">
-                    {cat.nama}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Category filter */}
+            <div className="w-full sm:w-48 shrink-0">
+              <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || 'ALL')}>
+                <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
+                  <SelectValue placeholder="Kategori">
+                    {categoryFilter === 'ALL'
+                      ? 'Semua Kategori'
+                      : categoryList.find((c) => c.id === categoryFilter)?.nama || 'Kategori'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">Semua Kategori</SelectItem>
+                  {categoryList.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                      {cat.nama}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
