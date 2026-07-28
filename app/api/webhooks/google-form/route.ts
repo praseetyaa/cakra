@@ -1,0 +1,193 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+export async function POST(request: Request) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        { success: false, error: 'Konfigurasi server Supabase belum lengkap.' },
+        { status: 500 }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    const body = await request.json()
+
+    // 1. Secret Key Verification (optional security check)
+    const secretHeader = request.headers.get('x-webhook-secret') || body.secret
+    const expectedSecret = process.env.GOOGLE_FORM_WEBHOOK_SECRET || 'cakra-google-form-secret'
+
+    if (secretHeader && secretHeader !== expectedSecret) {
+      return NextResponse.json(
+        { success: false, error: 'Kunci rahasia (Webhook Secret) tidak valid.' },
+        { status: 401 }
+      )
+    }
+
+    const {
+      email,
+      nama,
+      unit_kerja,
+      keperluan,
+      catatan,
+      items,
+    } = body
+
+    if (!email || !unit_kerja || !keperluan) {
+      return NextResponse.json(
+        { success: false, error: 'Email pemohon, unit kerja, dan keperluan wajib diisi.' },
+        { status: 400 }
+      )
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Harap sertakan minimal 1 item barang yang diminta.' },
+        { status: 400 }
+      )
+    }
+
+    // 2. Check if email belongs to an existing registered profile
+    let pemohon_id: string | null = null
+    const cleanEmail = String(email).trim().toLowerCase()
+
+    const { data: profile } = await supabase
+      .from('profiles_with_email')
+      .select('id')
+      .eq('email', cleanEmail)
+      .maybeSingle()
+
+    if (profile) {
+      pemohon_id = profile.id
+    } else {
+      // Check fallback profiles table if email matches
+      const { data: directProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', cleanEmail)
+        .maybeSingle()
+
+      if (directProfile) {
+        pemohon_id = directProfile.id
+      }
+    }
+
+    // 3. Resolve items to barang_id in database
+    const resolvedItems: { barang_id: string; jumlah: number }[] = []
+    const unmappedItems: string[] = []
+
+    // Fetch all available barang list for name matching
+    const { data: allBarang } = await supabase
+      .from('barang')
+      .select('id, nama, kd_barang, kd_brng, kode_barang_lengkap')
+
+    const barangList = allBarang || []
+
+    for (const item of items) {
+      const searchItemName = String(item.nama_barang || item.nama || '').trim().toLowerCase()
+      const itemQty = parseInt(String(item.jumlah || 1), 10)
+
+      if (!searchItemName || isNaN(itemQty) || itemQty <= 0) continue
+
+      // Exact match or fuzzy match
+      const matched = barangList.find((b) => {
+        const bName = b.nama.toLowerCase()
+        const bKode = (b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`).toLowerCase()
+        return (
+          bName === searchItemName ||
+          bName.includes(searchItemName) ||
+          searchItemName.includes(bName) ||
+          (bKode && bKode === searchItemName)
+        )
+      })
+
+      if (matched) {
+        resolvedItems.push({
+          barang_id: matched.id,
+          jumlah: itemQty,
+        })
+      } else {
+        unmappedItems.push(searchItemName)
+      }
+    }
+
+    if (resolvedItems.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Tidak ada barang yang cocok ditemukan di sistem CAKRA untuk item: ${unmappedItems.join(', ')}`,
+        },
+        { status: 400 }
+      )
+    }
+
+    // 4. Insert header row into `permintaan`
+    const { data: permintaan, error: reqError } = await supabase
+      .from('permintaan')
+      .insert({
+        pemohon_id: pemohon_id,
+        pemohon_email: cleanEmail,
+        pemohon_nama_manual: pemohon_id ? null : (nama || cleanEmail),
+        unit_kerja: String(unit_kerja).trim(),
+        keperluan: String(keperluan).trim(),
+        catatan: catatan ? String(catatan).trim() : 'Diisi otomatis via Google Form',
+        sumber: 'form',
+        status: 'menunggu',
+      })
+      .select()
+      .single()
+
+    if (reqError || !permintaan) {
+      console.error('Error inserting webhook permintaan:', reqError)
+      return NextResponse.json(
+        { success: false, error: reqError?.message || 'Gagal menyimpan header permintaan.' },
+        { status: 500 }
+      )
+    }
+
+    // 5. Insert details into `permintaan_detail`
+    const detailRows = resolvedItems.map((item) => ({
+      permintaan_id: permintaan.id,
+      barang_id: item.barang_id,
+      jumlah: item.jumlah,
+    }))
+
+    const { error: detailError } = await supabase.from('permintaan_detail').insert(detailRows)
+
+    if (detailError) {
+      console.error('Error inserting webhook permintaan_detail:', detailError)
+      await supabase.from('permintaan').delete().eq('id', permintaan.id)
+      return NextResponse.json(
+        { success: false, error: detailError.message || 'Gagal menyimpan item barang.' },
+        { status: 500 }
+      )
+    }
+
+    // Create notification entry if notification table exists
+    try {
+      await supabase.from('notifikasi').insert({
+        title: 'Permintaan Google Form Baru',
+        message: `Permintaan ${permintaan.nomor} masuk dari Google Form (${cleanEmail})`,
+        role_target: 'pengelola',
+        dibaca: false,
+      })
+    } catch {
+      // Ignore notification creation errors
+    }
+
+    return NextResponse.json({
+      success: true,
+      nomor: permintaan.nomor,
+      permintaan_id: permintaan.id,
+      message: `Permintaan ${permintaan.nomor} berhasil masuk dari Google Form!`,
+      unmapped_items: unmappedItems.length > 0 ? unmappedItems : undefined,
+    })
+  } catch (error: unknown) {
+    console.error('Webhook Google Form error:', error)
+    const msg = error instanceof Error ? error.message : 'Internal Server Error'
+    return NextResponse.json({ success: false, error: msg }, { status: 500 })
+  }
+}
