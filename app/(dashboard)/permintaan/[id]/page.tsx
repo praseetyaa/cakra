@@ -336,7 +336,7 @@ export default async function PermintaanDetailPage({ params }: PageProps) {
                 Daftar Item Barang Diminta
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/40 dark:bg-slate-900/30 hover:bg-slate-50/40">

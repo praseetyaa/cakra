@@ -236,7 +236,7 @@ export default function ListPermintaan({
 
         {/* Requests Table Listings */}
         <TabsContent value={activeTab} className="mt-0 focus-visible:outline-none">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50">

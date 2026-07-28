@@ -190,7 +190,7 @@ export default function TabelPengguna({
 
         {/* TAB 1: PENGGUNA TERDAFTAR */}
         <TabsContent value="aktif" className="mt-4">
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto bg-white dark:bg-slate-900 shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/70 dark:bg-slate-800/40">
@@ -280,7 +280,7 @@ export default function TabelPengguna({
 
         {/* TAB 2: PRE-ASSIGN GOOGLE OAUTH */}
         <TabsContent value="provisioning" className="mt-4">
-          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto bg-white dark:bg-slate-900 shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/70 dark:bg-slate-800/40">
