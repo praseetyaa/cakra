@@ -192,7 +192,7 @@ export default function ListPermintaan({
           </TabsList>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center justify-center gap-2 w-full sm:w-auto">
             {['pengelola', 'pimpinan', 'admin'].includes(userRole) && (
               <>
                 <Button

@@ -238,7 +238,7 @@ export default function TabelBarang({
 
         {/* Add & Import Barang Triggers (restricted) */}
         {isEditable && (
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center justify-center gap-2 w-full sm:w-auto shrink-0 flex-wrap sm:flex-nowrap">
             <Button
               type="button"
               variant="outline"
