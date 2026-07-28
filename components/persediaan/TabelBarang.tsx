@@ -195,11 +195,11 @@ export default function TabelBarang({
           </div>
 
           {/* Status & Category filters */}
-          <div className="grid grid-cols-2 gap-2.5 w-full sm:flex sm:w-auto shrink-0 justify-center">
+          <div className="grid grid-cols-2 gap-2.5 w-full sm:flex sm:w-auto shrink-0">
             {/* Status filter */}
             <div className="w-full sm:w-44 shrink-0">
               <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val || 'ALL')}>
-                <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
+                <SelectTrigger className="w-full text-xs overflow-hidden text-ellipsis justify-between">
                   <SelectValue placeholder="Status Stok">
                     {statusFilter === 'ALL'
                       ? 'Semua Status'
@@ -219,7 +219,7 @@ export default function TabelBarang({
             {/* Category filter */}
             <div className="w-full sm:w-48 shrink-0">
               <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val || 'ALL')}>
-                <SelectTrigger className="text-xs overflow-hidden text-ellipsis">
+                <SelectTrigger className="w-full text-xs overflow-hidden text-ellipsis justify-between">
                   <SelectValue placeholder="Kategori">
                     {categoryFilter === 'ALL'
                       ? 'Semua Kategori'
