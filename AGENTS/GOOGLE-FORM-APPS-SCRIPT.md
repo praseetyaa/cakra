@@ -61,10 +61,9 @@ function onFormSubmit(e) {
     let catatan = "";
     let items = [];
 
-    // 1. JIKA DIPANGGIL DARI GOOGLE SHEET (e.namedValues - PALING AKURAT & BEBAS URUTAN KOLOM)
+    // 1. JIKA DIPANGGIL DARI GOOGLE SHEET (e.namedValues - SUPPORT MULTI-ITEM)
     if (e && e.namedValues) {
-      let tempNamaBarang = "";
-      let tempJumlah = 1;
+      let currentBarang = "";
 
       for (let key in e.namedValues) {
         const valArr = e.namedValues[key];
@@ -74,10 +73,17 @@ function onFormSubmit(e) {
         if (lowerKey.includes("email")) {
           email = val;
         } else if (lowerKey.includes("barang") || lowerKey.includes("deskripsi")) {
-          tempNamaBarang = val;
+          if (currentBarang && val) {
+            items.push({ nama_barang: currentBarang, jumlah: 1 });
+          }
+          currentBarang = val;
         } else if (lowerKey.includes("jumlah") || lowerKey.includes("qty")) {
           const parsed = parseInt(val, 10);
-          tempJumlah = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
+          const validQty = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
+          if (currentBarang) {
+            items.push({ nama_barang: currentBarang, jumlah: validQty });
+            currentBarang = "";
+          }
         } else if (lowerKey.includes("nama pemohon") || (lowerKey.includes("nama") && !lowerKey.includes("barang"))) {
           nama = val;
         } else if (lowerKey.includes("unit") || lowerKey.includes("kerja")) {
@@ -89,11 +95,8 @@ function onFormSubmit(e) {
         }
       }
 
-      if (tempNamaBarang) {
-        items.push({
-          nama_barang: tempNamaBarang,
-          jumlah: tempJumlah
-        });
+      if (currentBarang) {
+        items.push({ nama_barang: currentBarang, jumlah: 1 });
       }
     }
     // 2. JIKA DIPANGGIL DARI GOOGLE FORM DIRECT (e.response - SUPPORT MULTI-ITEM)
