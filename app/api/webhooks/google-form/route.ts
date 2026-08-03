@@ -102,11 +102,10 @@ export async function POST(request: Request) {
       const codeMatch = rawSearchName.match(/\[(.*?)\]/)
       const extractedCode = codeMatch ? codeMatch[1].trim().toLowerCase() : ''
 
-      // Clean name by removing [code] and (stok...)
+      // Clean name by removing [code] and any (parenthetical text like Stok: 3 PCS)
       const cleanedName = rawSearchName
         .replace(/\[.*?\]/g, '')
-        .replace(/\(stok:.*?\)/gi, '')
-        .replace(/\(stok.*?\)/gi, '')
+        .replace(/\(.*?\)/g, '')
         .trim()
         .toLowerCase()
 
@@ -114,23 +113,21 @@ export async function POST(request: Request) {
         const bName = (b.nama || '').trim().toLowerCase()
         const bKode = (b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`).trim().toLowerCase()
 
-        // 1. Exact or substring match on extracted code
-        if (extractedCode && bKode && (bKode === extractedCode || extractedCode.includes(bKode))) {
+        // 1. Match extracted code in brackets [BRG-001]
+        if (extractedCode && bKode && (bKode === extractedCode || extractedCode.includes(bKode) || bKode.includes(extractedCode))) {
           return true
         }
 
-        // 2. Exact or substring match on item code
-        if (bKode && (bKode === cleanedName || cleanedName.includes(bKode))) {
-          return true
-        }
-
-        // 3. Name comparison
+        // 2. Match cleaned name against bName
         if (bName && cleanedName) {
-          return (
-            bName === cleanedName ||
-            bName.includes(cleanedName) ||
-            cleanedName.includes(bName)
-          )
+          if (bName === cleanedName || bName.includes(cleanedName) || cleanedName.includes(bName)) {
+            return true
+          }
+        }
+
+        // 3. Substring match on bKode if present in rawSearchName
+        if (bKode && bKode.length > 2 && rawSearchName.toLowerCase().includes(bKode)) {
+          return true
         }
 
         return false
