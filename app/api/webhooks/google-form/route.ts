@@ -154,74 +154,32 @@ export async function POST(request: Request) {
       )
     }
 
-    // 4. Insert header row into `permintaan` with .select() to get generated id & nomor
-    let mePermintaanId: string | null = null
-    let meNomor: string = 'PRM-FORM'
+    // 4. Generate unique UUID for header row beforehand to prevent RLS select issues
+    const newPermintaanId = crypto.randomUUID()
 
-    const { data: insertedPermintaan, error: reqError } = await supabase
-      .from('permintaan')
-      .insert({
-        pemohon_id: pemohon_id,
-        pemohon_email: cleanEmail,
-        pemohon_nama_manual: pemohon_id ? null : (nama || cleanEmail),
-        unit_kerja: String(unit_kerja).trim(),
-        keperluan: String(keperluan).trim(),
-        catatan: catatan ? String(catatan).trim() : 'Diisi otomatis via Google Form',
-        sumber: 'form',
-        status: 'menunggu',
-      })
-      .select('id, nomor')
-      .single()
+    const { error: reqError } = await supabase.from('permintaan').insert({
+      id: newPermintaanId,
+      pemohon_id: pemohon_id,
+      pemohon_email: cleanEmail,
+      pemohon_nama_manual: pemohon_id ? null : (nama || cleanEmail),
+      unit_kerja: String(unit_kerja).trim(),
+      keperluan: String(keperluan).trim(),
+      catatan: catatan ? String(catatan).trim() : 'Diisi otomatis via Google Form',
+      sumber: 'form',
+      status: 'menunggu',
+    })
 
     if (reqError) {
-      console.error('Error inserting webhook permintaan with select:', reqError)
-      // Fallback in case RLS blocks insert with select: try basic insert then query
-      const { error: fallbackReqError } = await supabase.from('permintaan').insert({
-        pemohon_id: pemohon_id,
-        pemohon_email: cleanEmail,
-        pemohon_nama_manual: pemohon_id ? null : (nama || cleanEmail),
-        unit_kerja: String(unit_kerja).trim(),
-        keperluan: String(keperluan).trim(),
-        catatan: catatan ? String(catatan).trim() : 'Diisi otomatis via Google Form',
-        sumber: 'form',
-        status: 'menunggu',
-      })
-
-      if (fallbackReqError) {
-        return NextResponse.json(
-          { success: false, error: fallbackReqError.message || 'Gagal menyimpan header permintaan.' },
-          { status: 500 }
-        )
-      }
-
-      const { data: fetchedPermintaan } = await supabase
-        .from('permintaan')
-        .select('id, nomor')
-        .eq('pemohon_email', cleanEmail)
-        .eq('sumber', 'form')
-        .order('tanggal', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (fetchedPermintaan) {
-        mePermintaanId = fetchedPermintaan.id
-        meNomor = fetchedPermintaan.nomor
-      }
-    } else if (insertedPermintaan) {
-      mePermintaanId = insertedPermintaan.id
-      meNomor = insertedPermintaan.nomor
-    }
-
-    if (!mePermintaanId) {
+      console.error('Error inserting webhook permintaan:', reqError)
       return NextResponse.json(
-        { success: false, error: 'Gagal mendapatkan ID header permintaan yang baru dibuat.' },
+        { success: false, error: reqError.message || 'Gagal menyimpan header permintaan.' },
         { status: 500 }
       )
     }
 
-    // 5. Insert details into `permintaan_detail` if permintaan.id resolved and items resolved
+    // 5. Insert details into `permintaan_detail` using pre-generated UUID
     const detailRows = resolvedItems.map((item) => ({
-      permintaan_id: mePermintaanId,
+      permintaan_id: newPermintaanId,
       barang_id: item.barang_id,
       jumlah: item.jumlah,
     }))
@@ -253,8 +211,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      nomor: meNomor,
-      permintaan_id: mePermintaanId,
+      nomor: 'PRM-FORM',
+      permintaan_id: newPermintaanId,
       message: `Permintaan berhasil masuk dari Google Form!`,
       resolved_count: resolvedItems.length,
       unmapped_items: unmappedItems.length > 0 ? unmappedItems : undefined,
