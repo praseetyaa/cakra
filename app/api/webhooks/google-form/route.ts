@@ -146,8 +146,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // NOTE: Removed forced fallback to barangList[0].id! 
-    // If no items matched, we log unmapped items instead of assigning a random item.
+    if (resolvedItems.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Item barang tidak ditemukan/cocok di database CAKRA. Item yang dikirim: ${unmappedItems.join(', ')}`,
+          unmapped_items: unmappedItems,
+        },
+        { status: 400 }
+      )
+    }
 
     // 4. Insert header row into `permintaan` with .select() to get generated id & nomor
     let mePermintaanId: string | null = null
@@ -207,19 +215,31 @@ export async function POST(request: Request) {
       meNomor = insertedPermintaan.nomor
     }
 
+    if (!mePermintaanId) {
+      return NextResponse.json(
+        { success: false, error: 'Gagal mendapatkan ID header permintaan yang baru dibuat.' },
+        { status: 500 }
+      )
+    }
+
     // 5. Insert details into `permintaan_detail` if permintaan.id resolved and items resolved
-    if (mePermintaanId && resolvedItems.length > 0) {
-      const detailRows = resolvedItems.map((item) => ({
-        permintaan_id: mePermintaanId,
-        barang_id: item.barang_id,
-        jumlah: item.jumlah,
-      }))
+    const detailRows = resolvedItems.map((item) => ({
+      permintaan_id: mePermintaanId,
+      barang_id: item.barang_id,
+      jumlah: item.jumlah,
+    }))
 
-      const { error: detailError } = await supabase.from('permintaan_detail').insert(detailRows)
+    const { error: detailError } = await supabase.from('permintaan_detail').insert(detailRows)
 
-      if (detailError) {
-        console.error('Error inserting webhook permintaan_detail:', detailError)
-      }
+    if (detailError) {
+      console.error('Error inserting webhook permintaan_detail:', detailError)
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Gagal menyimpan detail barang ke database: ${detailError.message} (Code: ${detailError.code})`,
+        },
+        { status: 500 }
+      )
     }
 
     // 6. Create notification entry if notification table exists

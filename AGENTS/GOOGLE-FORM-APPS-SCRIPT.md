@@ -66,15 +66,15 @@ function onFormSubmit(e) {
         const val = Array.isArray(valArr) && valArr.length > 0 ? String(valArr[0]).trim() : String(valArr || "").trim();
         const lowerKey = key.toLowerCase().trim();
 
-        if (lowerKey.includes("barang") || lowerKey.includes("deskripsi")) {
+        if (lowerKey.includes("email")) {
+          email = val;
+        } else if (lowerKey.includes("barang") || lowerKey.includes("deskripsi")) {
           tempNamaBarang = val;
         } else if (lowerKey.includes("jumlah") || lowerKey.includes("qty")) {
           const parsed = parseInt(val, 10);
           tempJumlah = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
-        } else if (lowerKey.includes("pemohon") || (lowerKey.includes("nama") && !lowerKey.includes("barang"))) {
+        } else if (lowerKey.includes("nama pemohon") || (lowerKey.includes("nama") && !lowerKey.includes("barang"))) {
           nama = val;
-        } else if (lowerKey.includes("email")) {
-          email = email || val;
         } else if (lowerKey.includes("unit") || lowerKey.includes("kerja")) {
           unitKerja = val;
         } else if (lowerKey.includes("keperluan")) {
