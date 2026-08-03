@@ -10,7 +10,7 @@ Dokumen ini berisi kode **Google Apps Script** dan skrip SQL RLS Supabase untuk 
 Karena data dikirim otomatis oleh server Google (tanpa login web), jalankan skrip berikut di **Supabase SQL Editor**:
 
 ```sql
--- Berikan izin insert untuk permintaan dari Google Form
+-- Berikan izin insert & select untuk permintaan dari Google Form
 drop policy if exists "permintaan_insert_form" on public.permintaan;
 create policy "permintaan_insert_form" on public.permintaan
   for insert with check (sumber = 'form');
@@ -18,6 +18,11 @@ create policy "permintaan_insert_form" on public.permintaan
 drop policy if exists "permintaan_detail_insert_form" on public.permintaan_detail;
 create policy "permintaan_detail_insert_form" on public.permintaan_detail
   for insert with check (true);
+
+-- Izin SELECT agar detail barang dari Google Form bisa dibaca di Web UI
+drop policy if exists "permintaan_detail_select_form" on public.permintaan_detail;
+create policy "permintaan_detail_select_form" on public.permintaan_detail
+  for select using (true);
 
 -- Berikan izin select public/anon untuk membaca daftar barang
 drop policy if exists "barang_select_public" on public.barang;
