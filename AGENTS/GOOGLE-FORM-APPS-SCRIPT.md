@@ -56,36 +56,42 @@ function onFormSubmit(e) {
     let catatan = "";
     let items = [];
 
-    // JIKA DIPANGGIL DARI GOOGLE SHEET RESPON FORM
-    if (e && e.values) {
-      // Pembacaan Kolom Spreadsheet:
-      // e.values[0] = Timestamp (A)
-      // e.values[1] = Nama Pemohon (B)
-      // e.values[2] = Email Pemohon (C)
-      // e.values[3] = Unit Kerja (D)
-      // e.values[4] = Keperluan (E)
-      // e.values[5] = Nama Barang / Deskripsi (F)
-      // e.values[6] = Kode Barang (G)
-      // e.values[7] = Jumlah (H)
-      // e.values[8] = Catatan (I)
+    // 1. JIKA DIPANGGIL DARI GOOGLE SHEET (e.namedValues - PALING AKURAT & BEBAS URUTAN KOLOM)
+    if (e && e.namedValues) {
+      let tempNamaBarang = "";
+      let tempJumlah = 1;
 
-      nama = e.values[1] || "";
-      email = e.values[2] || "";
-      unitKerja = e.values[3] || "";
-      keperluan = e.values[4] || "";
-      
-      const namaBarang = e.values[5] || "";
-      const jumlahBarang = parseInt(e.values[7] || "1", 10);
-      catatan = e.values[8] || "Diisi via Google Form";
+      for (let key in e.namedValues) {
+        const valArr = e.namedValues[key];
+        const val = Array.isArray(valArr) && valArr.length > 0 ? String(valArr[0]).trim() : String(valArr || "").trim();
+        const lowerKey = key.toLowerCase().trim();
 
-      if (namaBarang) {
+        if (lowerKey.includes("barang") || lowerKey.includes("deskripsi")) {
+          tempNamaBarang = val;
+        } else if (lowerKey.includes("jumlah") || lowerKey.includes("qty")) {
+          const parsed = parseInt(val, 10);
+          tempJumlah = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
+        } else if (lowerKey.includes("pemohon") || (lowerKey.includes("nama") && !lowerKey.includes("barang"))) {
+          nama = val;
+        } else if (lowerKey.includes("email")) {
+          email = email || val;
+        } else if (lowerKey.includes("unit") || lowerKey.includes("kerja")) {
+          unitKerja = val;
+        } else if (lowerKey.includes("keperluan")) {
+          keperluan = val;
+        } else if (lowerKey.includes("catatan")) {
+          catatan = val;
+        }
+      }
+
+      if (tempNamaBarang) {
         items.push({
-          nama_barang: namaBarang,
-          jumlah: isNaN(jumlahBarang) ? 1 : jumlahBarang
+          nama_barang: tempNamaBarang,
+          jumlah: tempJumlah
         });
       }
-    } 
-    // JIKA DIPANGGIL DARI GOOGLE FORM DIRECT
+    }
+    // 2. JIKA DIPANGGIL DARI GOOGLE FORM DIRECT (e.response)
     else if (e && e.response) {
       email = e.response.getRespondentEmail() || "";
       const itemResponses = e.response.getItemResponses();
@@ -120,6 +126,24 @@ function onFormSubmit(e) {
         items.push({
           nama_barang: tempNamaBarang,
           jumlah: tempJumlah
+        });
+      }
+    }
+    // 3. FALLBACK: ARRAY e.values
+    else if (e && e.values) {
+      nama = e.values[1] || "";
+      email = e.values[2] || "";
+      unitKerja = e.values[3] || "";
+      keperluan = e.values[4] || "";
+      
+      const namaBarang = e.values[5] || e.values[6] || "";
+      const jumlahBarang = parseInt(e.values[7] || e.values[6] || "1", 10);
+      catatan = e.values[8] || e.values[5] || "Diisi via Google Form";
+
+      if (namaBarang) {
+        items.push({
+          nama_barang: namaBarang,
+          jumlah: isNaN(jumlahBarang) ? 1 : jumlahBarang
         });
       }
     }
