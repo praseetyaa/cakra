@@ -79,10 +79,13 @@ function onFormSubmit(e) {
           currentBarang = val;
         } else if (lowerKey.includes("jumlah") || lowerKey.includes("qty")) {
           const parsed = parseInt(val, 10);
-          const validQty = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
-          if (currentBarang) {
-            items.push({ nama_barang: currentBarang, jumlah: validQty });
-            currentBarang = "";
+          if (!isNaN(parsed) && parsed > 0) {
+            if (currentBarang) {
+              items.push({ nama_barang: currentBarang, jumlah: parsed });
+              currentBarang = "";
+            }
+          } else if (val) {
+            catatan = catatan ? (catatan + " | Rincian Jumlah: " + val) : ("Rincian Jumlah: " + val);
           }
         } else if (lowerKey.includes("nama pemohon") || (lowerKey.includes("nama") && !lowerKey.includes("barang"))) {
           nama = val;
@@ -119,10 +122,14 @@ function onFormSubmit(e) {
             }
           }
         } else if (title.includes("jumlah") || title.includes("qty")) {
-          const qtyParsed = parseInt(String(response), 10);
-          const validQty = isNaN(qtyParsed) || qtyParsed <= 0 ? 1 : qtyParsed;
-          if (items.length > 0) {
-            items[items.length - 1].jumlah = validQty;
+          const valStr = String(response).trim();
+          const qtyParsed = parseInt(valStr, 10);
+          if (!isNaN(qtyParsed) && qtyParsed > 0) {
+            if (items.length > 0) {
+              items[items.length - 1].jumlah = qtyParsed;
+            }
+          } else if (valStr) {
+            catatan = catatan ? (catatan + " | Rincian Jumlah: " + valStr) : ("Rincian Jumlah: " + valStr);
           }
         } else if (title.includes("nama pemohon") || (title.includes("nama") && !title.includes("barang"))) {
           nama = String(response);

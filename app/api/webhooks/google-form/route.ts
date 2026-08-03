@@ -96,7 +96,8 @@ export async function POST(request: Request) {
     const flatItems: { nama_barang: string; jumlah: number }[] = []
     for (const rawItem of parsedItems) {
       const rawName = String(rawItem.nama_barang || rawItem.nama || rawItem.barang || '').trim()
-      const itemQty = parseInt(String(rawItem.jumlah || rawItem.qty || 1), 10)
+      let itemQty = parseInt(String(rawItem.jumlah || rawItem.qty || 1), 10)
+      if (isNaN(itemQty) || itemQty <= 0) itemQty = 1
       
       // If checkbox sent multiple items as comma-separated string e.g. "Item A, Item B"
       if (rawName.includes(',') && rawName.includes('[')) {
@@ -108,6 +109,28 @@ export async function POST(request: Request) {
         }
       } else {
         flatItems.push({ nama_barang: rawName, jumlah: itemQty })
+      }
+    }
+
+    // Smart Quantity Extractor: Parse numbers near item keywords from catatan or freeform text
+    const fullTextForQty = String(catatan || '').trim()
+    if (fullTextForQty) {
+      for (const item of flatItems) {
+        const cleanedItemName = item.nama_barang.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim().toLowerCase()
+        const words = cleanedItemName.split(/\s+/).filter((w) => w.length > 2)
+
+        for (const word of words) {
+          // Look for regex pattern like "word 3" or "word: 3" or "3 pcs word"
+          const regexNearNumber = new RegExp(`(?:${word}[^0-9,;]*?(\\d+))|(?:(\\d+)[^0-9,;]*?${word})`, 'i')
+          const match = fullTextForQty.match(regexNearNumber)
+          if (match) {
+            const parsedNum = parseInt(match[1] || match[2], 10)
+            if (!isNaN(parsedNum) && parsedNum > 0) {
+              item.jumlah = parsedNum
+              break
+            }
+          }
+        }
       }
     }
 
