@@ -39,7 +39,7 @@ Google Apps Script berjalan di server cloud Google. Server Google **tidak dapat 
  */
 
 // GANTI DENGAN URL PUBLIK / DOMAIN CAKRA ANDA
-const CAKRA_WEBHOOK_URL = "https://domain-cakra-anda.com/api/webhooks/google-form";
+const CAKRA_WEBHOOK_URL = "https://cakra.spandiv.xyz/api/webhooks/google-form";
 const WEBHOOK_SECRET = "cakra-google-form-secret";
 
 function onFormSubmit(e) {
@@ -137,4 +137,85 @@ function onFormSubmit(e) {
     Logger.log("Error in onFormSubmit: " + err.toString());
   }
 }
+
+/**
+ * 🔄 FITUR SINKRONISASI DROPDOWN / CHOICE BARANG GOOGLE FORM
+ * 
+ * Fungsi ini mengambil daftar barang aktif dari API CAKRA dan memperbarui 
+ * pilihan barang pada Google Form secara otomatis.
+ * 
+ * CARA MENGGUNAKAN:
+ * 1. Buka Google Form Anda -> Klik Titik Tiga (More) -> Script editor.
+ * 2. Masukkan ID Google Form Anda pada variabel GOOGLE_FORM_ID di bawah.
+ * 3. Ganti NAMA_PERTANYAAN_BARANG sesuai nama judul soal di Google Form (misal: "Nama Barang" / "Pilih Barang").
+ * 4. Buat Trigger di Apps Script (Clock icon / Triggers) -> Add Trigger -> Run: syncFormChoices -> Time-driven (misal: Every 15 minutes / Every hour).
+ */
+const CAKRA_SYNC_URL = "https://cakra.spandiv.xyz/api/webhooks/google-form/sync";
+const WEBHOOK_SECRET = "cakra-google-form-secret";
+const GOOGLE_FORM_ID = "1Hw6Lda43O5TrluLM8-iByFnd7wUbqZfYmJ1-fHLMw-M";
+const NAMA_PERTANYAAN_BARANG = "Nama Barang"; // Judul pertanyaan dropdown/list barang di Google Form
+
+function syncFormChoices() {
+  try {
+    const url = CAKRA_SYNC_URL + "?secret=" + encodeURIComponent(WEBHOOK_SECRET);
+    const response = UrlFetchApp.fetch(url, {
+      method: "get",
+      headers: {
+        "x-webhook-secret": WEBHOOK_SECRET
+      },
+      muteHttpExceptions: true
+    });
+
+    const statusCode = response.getResponseCode();
+    if (statusCode !== 200) {
+      Logger.log("HTTP Error " + statusCode + " saat memanggil API: " + response.getContentText());
+      return;
+    }
+
+    const json = JSON.parse(response.getContentText());
+
+    if (!json.success || !json.items || json.items.length === 0) {
+      Logger.log("Gagal atau daftar barang kosong: " + response.getContentText());
+      return;
+    }
+
+    // Opsi format pilihan dropdown yang bisa Anda gunakan:
+    // - json.choices_names_only  => "Kertas A4"
+    // - json.choices_with_code   => "[BRG-001] Kertas A4" (ADA KODE BARANG)
+    // - json.choices_with_stock  => "Kertas A4 (Stok: 10)"
+    // - json.choices_full        => "[BRG-001] Kertas A4 (Stok: 10)" (KODE + NAMA + STOK)
+    const itemChoices = json.choices_with_code || json.choices_names_only;
+
+    const form = FormApp.openById(GOOGLE_FORM_ID);
+    const items = form.getItems();
+    let updated = false;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const title = item.getTitle().trim().toLowerCase();
+
+      if (title === NAMA_PERTANYAAN_BARANG.trim().toLowerCase()) {
+        if (item.getType() === FormApp.ItemType.LIST) {
+          item.asListItem().setChoiceValues(itemChoices);
+          updated = true;
+        } else if (item.getType() === FormApp.ItemType.MULTIPLE_CHOICE) {
+          item.asMultipleChoiceItem().setChoiceValues(itemChoices);
+          updated = true;
+        } else if (item.getType() === FormApp.ItemType.CHECKBOX) {
+          item.asCheckboxItem().setChoiceValues(itemChoices);
+          updated = true;
+        }
+      }
+    }
+
+    if (updated) {
+      Logger.log("Berhasil memperbarui pilihan barang di Google Form (" + itemChoices.length + " barang)");
+    } else {
+      Logger.log("Pertanyaan dengan judul '" + NAMA_PERTANYAAN_BARANG + "' tidak ditemukan di Google Form.");
+    }
+  } catch (err) {
+    Logger.log("Error in syncFormChoices: " + err.toString());
+  }
+}
 ```
+

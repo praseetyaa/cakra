@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const {
+    let {
       email,
       nama,
       unit_kerja,
@@ -43,7 +43,17 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    // Support items as parsed Array or JSON stringified
+    let parsedItems = items
+    if (typeof items === 'string') {
+      try {
+        parsedItems = JSON.parse(items)
+      } catch {
+        parsedItems = []
+      }
+    }
+
+    if (!parsedItems || !Array.isArray(parsedItems) || parsedItems.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Harap sertakan minimal 1 item barang yang diminta.' },
         { status: 400 }
@@ -82,9 +92,9 @@ export async function POST(request: Request) {
 
     const barangList = allBarang || []
 
-    for (const item of items) {
-      const searchItemName = String(item.nama_barang || item.nama || '').trim().toLowerCase()
-      const itemQty = parseInt(String(item.jumlah || 1), 10)
+    for (const item of parsedItems) {
+      const searchItemName = String(item.nama_barang || item.nama || item.barang || '').trim().toLowerCase()
+      const itemQty = parseInt(String(item.jumlah || item.qty || 1), 10)
 
       if (!searchItemName || isNaN(itemQty) || itemQty <= 0) continue
 
@@ -109,15 +119,14 @@ export async function POST(request: Request) {
       }
     }
 
-    if (resolvedItems.length === 0 && barangList.length > 0) {
-      resolvedItems.push({
-        barang_id: barangList[0].id,
-        jumlah: 1,
-      })
-    }
+    // NOTE: Removed forced fallback to barangList[0].id! 
+    // If no items matched, we log unmapped items instead of assigning a random item.
 
-    // 4. Insert header row into `permintaan` without .select() to avoid RLS 42501 select check errors
-    const { error: reqError } = await supabase
+    // 4. Insert header row into `permintaan` with .select() to get generated id & nomor
+    let mePermintaanId: string | null = null
+    let meNomor: string = 'PRM-FORM'
+
+    const { data: insertedPermintaan, error: reqError } = await supabase
       .from('permintaan')
       .insert({
         pemohon_id: pemohon_id,
@@ -129,29 +138,52 @@ export async function POST(request: Request) {
         sumber: 'form',
         status: 'menunggu',
       })
+      .select('id, nomor')
+      .single()
 
     if (reqError) {
-      console.error('Error inserting webhook permintaan:', reqError)
-      return NextResponse.json(
-        { success: false, error: reqError.message || 'Gagal menyimpan header permintaan.' },
-        { status: 500 }
-      )
+      console.error('Error inserting webhook permintaan with select:', reqError)
+      // Fallback in case RLS blocks insert with select: try basic insert then query
+      const { error: fallbackReqError } = await supabase.from('permintaan').insert({
+        pemohon_id: pemohon_id,
+        pemohon_email: cleanEmail,
+        pemohon_nama_manual: pemohon_id ? null : (nama || cleanEmail),
+        unit_kerja: String(unit_kerja).trim(),
+        keperluan: String(keperluan).trim(),
+        catatan: catatan ? String(catatan).trim() : 'Diisi otomatis via Google Form',
+        sumber: 'form',
+        status: 'menunggu',
+      })
+
+      if (fallbackReqError) {
+        return NextResponse.json(
+          { success: false, error: fallbackReqError.message || 'Gagal menyimpan header permintaan.' },
+          { status: 500 }
+        )
+      }
+
+      const { data: fetchedPermintaan } = await supabase
+        .from('permintaan')
+        .select('id, nomor')
+        .eq('pemohon_email', cleanEmail)
+        .eq('sumber', 'form')
+        .order('tanggal', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (fetchedPermintaan) {
+        mePermintaanId = fetchedPermintaan.id
+        meNomor = fetchedPermintaan.nomor
+      }
+    } else if (insertedPermintaan) {
+      mePermintaanId = insertedPermintaan.id
+      meNomor = insertedPermintaan.nomor
     }
 
-    // 5. Query latest inserted row to get permintaan.id for details
-    const { data: permintaan } = await supabase
-      .from('permintaan')
-      .select('*')
-      .eq('pemohon_email', cleanEmail)
-      .eq('sumber', 'form')
-      .order('tanggal', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    // 6. Insert details into `permintaan_detail` if permintaan.id resolved
-    if (permintaan?.id && resolvedItems.length > 0) {
+    // 5. Insert details into `permintaan_detail` if permintaan.id resolved and items resolved
+    if (mePermintaanId && resolvedItems.length > 0) {
       const detailRows = resolvedItems.map((item) => ({
-        permintaan_id: permintaan.id,
+        permintaan_id: mePermintaanId,
         barang_id: item.barang_id,
         jumlah: item.jumlah,
       }))
@@ -163,7 +195,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create notification entry if notification table exists
+    // 6. Create notification entry if notification table exists
     try {
       await supabase.from('notifikasi').insert({
         title: 'Permintaan Google Form Baru',
@@ -177,9 +209,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      nomor: permintaan?.nomor || 'PRM-FORM',
-      permintaan_id: permintaan?.id || null,
+      nomor: meNomor,
+      permintaan_id: mePermintaanId,
       message: `Permintaan berhasil masuk dari Google Form!`,
+      resolved_count: resolvedItems.length,
       unmapped_items: unmappedItems.length > 0 ? unmappedItems : undefined,
     })
   } catch (error: unknown) {
