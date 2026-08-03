@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     // Fetch active items
     const { data: barangList, error } = await supabase
       .from('barang')
-      .select('id, nama, kd_barang, kd_brng, kode_barang_lengkap, stok, satuan, kategori:kategori_id(nama)')
+      .select('id, nama, kd_barang, kd_brng, kode_barang_lengkap, stok, satuan')
       .order('nama', { ascending: true })
 
     if (error) {
@@ -46,7 +46,6 @@ export async function GET(request: Request) {
       kode: b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`,
       stok: b.stok ?? 0,
       satuan: b.satuan || 'Pcs',
-      kategori: b.kategori?.nama || null,
       tersedia: (b.stok ?? 0) > 0,
     }))
 

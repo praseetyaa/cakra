@@ -18,6 +18,11 @@ create policy "permintaan_insert_form" on public.permintaan
 drop policy if exists "permintaan_detail_insert_form" on public.permintaan_detail;
 create policy "permintaan_detail_insert_form" on public.permintaan_detail
   for insert with check (true);
+
+-- Berikan izin select public/anon untuk membaca daftar barang
+drop policy if exists "barang_select_public" on public.barang;
+create policy "barang_select_public" on public.barang
+  for select using (true);
 ```
 
 ### 2. URL Webhook Harus Bisa Diakses dari Internet (Bukan `localhost`)
