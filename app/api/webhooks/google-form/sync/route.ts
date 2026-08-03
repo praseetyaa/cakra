@@ -51,10 +51,12 @@ export async function GET(request: Request) {
 
     // Provide pre-formatted strings for Google Form dropdown choices
     const itemNamesOnly = items.map((i) => i.nama)
-    const itemNamesWithStock = items.map((i) => `${i.nama} (Stok: ${i.stok})`)
+    const itemNamesWithStock = items.map((i) => `${i.nama} (Stok: ${i.stok} ${i.satuan || ''})`.trim())
     const itemChoicesWithCode = items.map((i) => (i.kode ? `[${i.kode}] ${i.nama}` : i.nama))
     const itemChoicesFull = items.map((i) =>
-      i.kode ? `[${i.kode}] ${i.nama} (Stok: ${i.stok})` : `${i.nama} (Stok: ${i.stok})`
+      i.kode
+        ? `[${i.kode}] ${i.nama} (Stok: ${i.stok} ${i.satuan || ''})`.trim()
+        : `${i.nama} (Stok: ${i.stok} ${i.satuan || ''})`.trim()
     )
 
     return NextResponse.json({

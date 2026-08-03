@@ -187,9 +187,9 @@ function syncFormChoices() {
     // Opsi format pilihan dropdown yang bisa Anda gunakan:
     // - json.choices_names_only  => "Kertas A4"
     // - json.choices_with_code   => "[BRG-001] Kertas A4" (ADA KODE BARANG)
-    // - json.choices_with_stock  => "Kertas A4 (Stok: 10)"
-    // - json.choices_full        => "[BRG-001] Kertas A4 (Stok: 10)" (KODE + NAMA + STOK)
-    const itemChoices = json.choices_with_code || json.choices_names_only;
+    // - json.choices_with_stock  => "Kertas A4 (Stok: 10 Pcs)"
+    // - json.choices_full        => "[BRG-001] Kertas A4 (Stok: 10 Pcs)" (KODE + NAMA + STOK)
+    const itemChoices = json.choices_full || json.choices_with_code || json.choices_names_only;
 
     const form = FormApp.openById(GOOGLE_FORM_ID);
     const items = form.getItems();
