@@ -99,12 +99,10 @@ function onFormSubmit(e) {
         items.push({ nama_barang: currentBarang, jumlah: 1 });
       }
     }
-    // 2. JIKA DIPANGGIL DARI GOOGLE FORM DIRECT (e.response - SUPPORT MULTI-ITEM)
+    // 2. JIKA DIPANGGIL DARI GOOGLE FORM DIRECT (e.response - SUPPORT MULTI-ITEM & CHECKBOX)
     else if (e && e.response) {
       email = e.response.getRespondentEmail() || "";
       const itemResponses = e.response.getItemResponses();
-
-      let currentBarang = "";
 
       for (let i = 0; i < itemResponses.length; i++) {
         const itemResponse = itemResponses[i];
@@ -114,16 +112,17 @@ function onFormSubmit(e) {
         if (title.includes("email")) {
           email = email || String(response);
         } else if (title.includes("barang") || title.includes("deskripsi")) {
-          if (currentBarang) {
-            items.push({ nama_barang: currentBarang, jumlah: 1 });
+          const selected = Array.isArray(response) ? response : [String(response)];
+          for (let s = 0; s < selected.length; s++) {
+            if (selected[s]) {
+              items.push({ nama_barang: String(selected[s]).trim(), jumlah: 1 });
+            }
           }
-          currentBarang = String(response);
         } else if (title.includes("jumlah") || title.includes("qty")) {
           const qtyParsed = parseInt(String(response), 10);
           const validQty = isNaN(qtyParsed) || qtyParsed <= 0 ? 1 : qtyParsed;
-          if (currentBarang) {
-            items.push({ nama_barang: currentBarang, jumlah: validQty });
-            currentBarang = "";
+          if (items.length > 0) {
+            items[items.length - 1].jumlah = validQty;
           }
         } else if (title.includes("nama pemohon") || (title.includes("nama") && !title.includes("barang"))) {
           nama = String(response);
@@ -134,10 +133,6 @@ function onFormSubmit(e) {
         } else if (title.includes("catatan")) {
           catatan = String(response);
         }
-      }
-
-      if (currentBarang) {
-        items.push({ nama_barang: currentBarang, jumlah: 1 });
       }
     }
     // 3. FALLBACK: ARRAY e.values

@@ -92,9 +92,28 @@ export async function POST(request: Request) {
 
     const barangList = allBarang || []
 
-    for (const item of parsedItems) {
-      const rawSearchName = String(item.nama_barang || item.nama || item.barang || '').trim()
-      const itemQty = parseInt(String(item.jumlah || item.qty || 1), 10)
+    // Flatten items if nama_barang contains comma-separated checkbox selections
+    const flatItems: { nama_barang: string; jumlah: number }[] = []
+    for (const rawItem of parsedItems) {
+      const rawName = String(rawItem.nama_barang || rawItem.nama || rawItem.barang || '').trim()
+      const itemQty = parseInt(String(rawItem.jumlah || rawItem.qty || 1), 10)
+      
+      // If checkbox sent multiple items as comma-separated string e.g. "Item A, Item B"
+      if (rawName.includes(',') && rawName.includes('[')) {
+        const splitNames = rawName.split(/,\s*(?=\[)/) // Split on comma before bracket
+        for (const subName of splitNames) {
+          if (subName.trim()) {
+            flatItems.push({ nama_barang: subName.trim(), jumlah: itemQty })
+          }
+        }
+      } else {
+        flatItems.push({ nama_barang: rawName, jumlah: itemQty })
+      }
+    }
+
+    for (const item of flatItems) {
+      const rawSearchName = String(item.nama_barang).trim()
+      const itemQty = item.jumlah
 
       if (!rawSearchName || isNaN(itemQty) || itemQty <= 0) continue
 
