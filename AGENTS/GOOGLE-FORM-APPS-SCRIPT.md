@@ -96,28 +96,34 @@ function onFormSubmit(e) {
         });
       }
     }
-    // 2. JIKA DIPANGGIL DARI GOOGLE FORM DIRECT (e.response)
+    // 2. JIKA DIPANGGIL DARI GOOGLE FORM DIRECT (e.response - SUPPORT MULTI-ITEM)
     else if (e && e.response) {
       email = e.response.getRespondentEmail() || "";
       const itemResponses = e.response.getItemResponses();
 
-      let tempNamaBarang = "";
-      let tempJumlah = 1;
+      let currentBarang = "";
 
       for (let i = 0; i < itemResponses.length; i++) {
         const itemResponse = itemResponses[i];
         const title = itemResponse.getItem().getTitle().toLowerCase().trim();
         const response = itemResponse.getResponse();
 
-        if (title.includes("barang") || title.includes("deskripsi")) {
-          tempNamaBarang = String(response);
+        if (title.includes("email")) {
+          email = email || String(response);
+        } else if (title.includes("barang") || title.includes("deskripsi")) {
+          if (currentBarang) {
+            items.push({ nama_barang: currentBarang, jumlah: 1 });
+          }
+          currentBarang = String(response);
         } else if (title.includes("jumlah") || title.includes("qty")) {
           const qtyParsed = parseInt(String(response), 10);
-          tempJumlah = isNaN(qtyParsed) || qtyParsed <= 0 ? 1 : qtyParsed;
-        } else if (title.includes("pemohon") || (title.includes("nama") && !title.includes("barang"))) {
+          const validQty = isNaN(qtyParsed) || qtyParsed <= 0 ? 1 : qtyParsed;
+          if (currentBarang) {
+            items.push({ nama_barang: currentBarang, jumlah: validQty });
+            currentBarang = "";
+          }
+        } else if (title.includes("nama pemohon") || (title.includes("nama") && !title.includes("barang"))) {
           nama = String(response);
-        } else if (title.includes("email")) {
-          email = email || String(response);
         } else if (title.includes("unit") || title.includes("kerja")) {
           unitKerja = String(response);
         } else if (title.includes("keperluan")) {
@@ -127,11 +133,8 @@ function onFormSubmit(e) {
         }
       }
 
-      if (tempNamaBarang) {
-        items.push({
-          nama_barang: tempNamaBarang,
-          jumlah: tempJumlah
-        });
+      if (currentBarang) {
+        items.push({ nama_barang: currentBarang, jumlah: 1 });
       }
     }
     // 3. FALLBACK: ARRAY e.values
