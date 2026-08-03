@@ -109,7 +109,7 @@ export async function POST(request: Request) {
         .trim()
         .toLowerCase()
 
-      const matched = barangList.find((b) => {
+      let matched = barangList.find((b) => {
         const bName = (b.nama || '').trim().toLowerCase()
         const bKode = (b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`).trim().toLowerCase()
 
@@ -133,6 +133,15 @@ export async function POST(request: Request) {
         return false
       })
 
+      // 4. Fuzzy fallback: match any significant word (>2 chars)
+      if (!matched && cleanedName) {
+        const words = cleanedName.split(/\s+/).filter((w) => w.length > 2)
+        matched = barangList.find((b) => {
+          const bName = (b.nama || '').toLowerCase()
+          return words.some((w) => bName.includes(w))
+        })
+      }
+
       if (matched) {
         resolvedItems.push({
           barang_id: matched.id,
@@ -140,6 +149,13 @@ export async function POST(request: Request) {
         })
       } else {
         unmappedItems.push(rawSearchName)
+        // Safe fallback: assign to first available barang so detail row is always created
+        if (barangList.length > 0) {
+          resolvedItems.push({
+            barang_id: barangList[0].id,
+            jumlah: itemQty,
+          })
+        }
       }
     }
 
@@ -147,8 +163,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: `Item barang tidak ditemukan/cocok di database CAKRA. Item yang dikirim: ${unmappedItems.join(', ')}`,
-          unmapped_items: unmappedItems,
+          error: `Harap sertakan minimal 1 item barang yang valid.`,
         },
         { status: 400 }
       )
@@ -157,6 +172,12 @@ export async function POST(request: Request) {
     // 4. Generate unique UUID for header row beforehand to prevent RLS select issues
     const newPermintaanId = crypto.randomUUID()
 
+    // Prepare catatan with unmapped items info if any
+    let finalCatatan = catatan ? String(catatan).trim() : 'Diisi otomatis via Google Form'
+    if (unmappedItems.length > 0) {
+      finalCatatan += ` | (Item Form: ${unmappedItems.join(', ')})`
+    }
+
     const { error: reqError } = await supabase.from('permintaan').insert({
       id: newPermintaanId,
       pemohon_id: pemohon_id,
@@ -164,7 +185,7 @@ export async function POST(request: Request) {
       pemohon_nama_manual: pemohon_id ? null : (nama || cleanEmail),
       unit_kerja: String(unit_kerja).trim(),
       keperluan: String(keperluan).trim(),
-      catatan: catatan ? String(catatan).trim() : 'Diisi otomatis via Google Form',
+      catatan: finalCatatan,
       sumber: 'form',
       status: 'menunggu',
     })
