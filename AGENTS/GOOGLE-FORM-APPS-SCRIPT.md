@@ -90,24 +90,37 @@ function onFormSubmit(e) {
       email = e.response.getRespondentEmail() || "";
       const itemResponses = e.response.getItemResponses();
 
+      let tempNamaBarang = "";
+      let tempJumlah = 1;
+
       for (let i = 0; i < itemResponses.length; i++) {
         const itemResponse = itemResponses[i];
-        const title = itemResponse.getItem().getTitle().toLowerCase();
+        const title = itemResponse.getItem().getTitle().toLowerCase().trim();
         const response = itemResponse.getResponse();
 
-        if (title.includes("email")) {
-          email = email || String(response);
-        } else if (title.includes("nama pemohon") || title.includes("nama")) {
+        if (title.includes("barang") || title.includes("deskripsi")) {
+          tempNamaBarang = String(response);
+        } else if (title.includes("jumlah") || title.includes("qty")) {
+          const qtyParsed = parseInt(String(response), 10);
+          tempJumlah = isNaN(qtyParsed) || qtyParsed <= 0 ? 1 : qtyParsed;
+        } else if (title.includes("pemohon") || (title.includes("nama") && !title.includes("barang"))) {
           nama = String(response);
+        } else if (title.includes("email")) {
+          email = email || String(response);
         } else if (title.includes("unit") || title.includes("kerja")) {
           unitKerja = String(response);
         } else if (title.includes("keperluan")) {
           keperluan = String(response);
         } else if (title.includes("catatan")) {
           catatan = String(response);
-        } else if (title.includes("barang") || title.includes("deskripsi")) {
-          items.push({ nama_barang: String(response), jumlah: 1 });
         }
+      }
+
+      if (tempNamaBarang) {
+        items.push({
+          nama_barang: tempNamaBarang,
+          jumlah: tempJumlah
+        });
       }
     }
 

@@ -93,20 +93,47 @@ export async function POST(request: Request) {
     const barangList = allBarang || []
 
     for (const item of parsedItems) {
-      const searchItemName = String(item.nama_barang || item.nama || item.barang || '').trim().toLowerCase()
+      const rawSearchName = String(item.nama_barang || item.nama || item.barang || '').trim()
       const itemQty = parseInt(String(item.jumlah || item.qty || 1), 10)
 
-      if (!searchItemName || isNaN(itemQty) || itemQty <= 0) continue
+      if (!rawSearchName || isNaN(itemQty) || itemQty <= 0) continue
+
+      // Extract bracketed code if present, e.g. "[1010301001000003] BALLPOINT CLICK (Stok: 3 PCS)"
+      const codeMatch = rawSearchName.match(/\[(.*?)\]/)
+      const extractedCode = codeMatch ? codeMatch[1].trim().toLowerCase() : ''
+
+      // Clean name by removing [code] and (stok...)
+      const cleanedName = rawSearchName
+        .replace(/\[.*?\]/g, '')
+        .replace(/\(stok:.*?\)/gi, '')
+        .replace(/\(stok.*?\)/gi, '')
+        .trim()
+        .toLowerCase()
 
       const matched = barangList.find((b) => {
-        const bName = (b.nama || '').toLowerCase()
-        const bKode = (b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`).toLowerCase()
-        return (
-          bName === searchItemName ||
-          bName.includes(searchItemName) ||
-          searchItemName.includes(bName) ||
-          (bKode && bKode === searchItemName)
-        )
+        const bName = (b.nama || '').trim().toLowerCase()
+        const bKode = (b.kode_barang_lengkap || `${b.kd_barang || ''}${b.kd_brng || ''}`).trim().toLowerCase()
+
+        // 1. Exact or substring match on extracted code
+        if (extractedCode && bKode && (bKode === extractedCode || extractedCode.includes(bKode))) {
+          return true
+        }
+
+        // 2. Exact or substring match on item code
+        if (bKode && (bKode === cleanedName || cleanedName.includes(bKode))) {
+          return true
+        }
+
+        // 3. Name comparison
+        if (bName && cleanedName) {
+          return (
+            bName === cleanedName ||
+            bName.includes(cleanedName) ||
+            cleanedName.includes(bName)
+          )
+        }
+
+        return false
       })
 
       if (matched) {
@@ -115,7 +142,7 @@ export async function POST(request: Request) {
           jumlah: itemQty,
         })
       } else {
-        unmappedItems.push(searchItemName)
+        unmappedItems.push(rawSearchName)
       }
     }
 
